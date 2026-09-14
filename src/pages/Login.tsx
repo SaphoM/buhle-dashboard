@@ -1,5 +1,6 @@
 import { useAuth } from "../auth/AuthContext";
 import buhleWordmark from "../assets/buhle-wordmark.png";
+import { BUILD_VERSION } from "../data/version";
 
 const roleLabels: Record<string, string> = {
   board: "Board Member",
@@ -47,6 +48,8 @@ export function Login() {
             </button>
           ))}
         </div>
+
+        <p className="mt-5 text-center text-[11px] text-ink-soft/30">Build v{BUILD_VERSION}</p>
       </div>
     </div>
   );

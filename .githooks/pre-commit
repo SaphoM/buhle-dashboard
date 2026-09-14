@@ -1,0 +1,17 @@
+#!/bin/sh
+# Auto-increments src/data/version.ts on every commit so the login page
+# always shows the current build number. Enable with:
+#   git config core.hooksPath .githooks
+set -e
+
+VERSION_FILE="src/data/version.ts"
+
+if [ ! -f "$VERSION_FILE" ]; then
+  exit 0
+fi
+
+current=$(grep -o 'BUILD_VERSION = [0-9]*' "$VERSION_FILE" | grep -o '[0-9]*')
+next=$((current + 1))
+
+sed -i '' "s/BUILD_VERSION = [0-9]*/BUILD_VERSION = ${next}/" "$VERSION_FILE"
+git add "$VERSION_FILE"
