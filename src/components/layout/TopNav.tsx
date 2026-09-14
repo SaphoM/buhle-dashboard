@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { NAV_ITEMS } from "../../auth/permissions";
+import buhleWordmark from "../../assets/buhle-wordmark.png";
 
 export function TopNav() {
   const { user, logout } = useAuth();
@@ -9,11 +10,8 @@ export function TopNav() {
 
   return (
     <div className="flex items-center gap-3 px-4 pt-4 sm:px-6">
-      <div className="flex shrink-0 items-center gap-2 rounded-full border border-ink/10 bg-white/80 py-2 pl-3 pr-4 shadow-sm">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-sm font-bold text-butter">
-          B
-        </div>
-        <span className="text-sm font-semibold tracking-tight text-ink">Buhle</span>
+      <div className="flex shrink-0 items-center rounded-full border border-ink/10 bg-white px-4 py-2 shadow-sm">
+        <img src={buhleWordmark} alt="Buhle Farmers' Academy" className="h-7 w-auto" />
       </div>
 
       <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-full border border-ink/10 bg-white/80 px-2 py-1.5 shadow-sm">
