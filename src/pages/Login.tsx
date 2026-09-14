@@ -1,4 +1,5 @@
 import { useAuth } from "../auth/AuthContext";
+import buhleWordmark from "../assets/buhle-wordmark.png";
 
 const roleLabels: Record<string, string> = {
   board: "Board Member",
@@ -19,10 +20,8 @@ export function Login() {
     <div className="app-gradient-bg flex min-h-screen items-center justify-center px-4">
       <div className="card-surface w-full max-w-md rounded-3xl border border-ink/10 p-8 shadow-[0_8px_30px_rgba(23,20,15,0.08)]">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-ink text-lg font-bold text-butter">
-            B
-          </div>
-          <h1 className="text-lg font-bold tracking-tight text-ink">Buhle Farmers Academy</h1>
+          <img src={buhleWordmark} alt="Buhle Farmers' Academy" className="mb-3 h-14 w-auto" />
+          <h1 className="sr-only">Buhle Farmers Academy</h1>
           <p className="text-sm text-ink-soft/60">Integrated Business Dashboard &amp; Early Warning System</p>
         </div>
 
