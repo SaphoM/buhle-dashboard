@@ -5,6 +5,7 @@ const stroke: Record<RagStatus, string> = {
   green: "#059669",
   amber: "#d97706",
   red: "#e11d48",
+  no_data: "#9ca3af",
 };
 
 export function Sparkline({ data, status }: { data: { period: string; value: number }[]; status: RagStatus }) {

@@ -8,6 +8,7 @@ import type { Kpi, RagStatus, TrendDirection } from "../types";
  * config/table without changing this logic (see Section 9 of the brief).
  */
 export function getStatus(kpi: Kpi): RagStatus {
+  if (kpi.dataAvailable === false) return "no_data";
   const { currentValue, greenThreshold, amberThreshold, lowerIsBetter } = kpi;
   if (lowerIsBetter) {
     if (currentValue <= greenThreshold) return "green";
@@ -63,10 +64,12 @@ export const statusLabel: Record<RagStatus, string> = {
   green: "On Target",
   amber: "Emerging Risk",
   red: "Critical",
+  no_data: "No Data",
 };
 
 export const statusMeaning: Record<RagStatus, string> = {
   green: "Continue monitoring and continuous improvement.",
   amber: "Develop a corrective action plan and monitor closely.",
   red: "Escalate to Executive Management / Board — immediate intervention required.",
+  no_data: "No figure submitted for this department/period yet — this is a data-quality gap, not a performance result.",
 };

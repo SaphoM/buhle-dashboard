@@ -4,7 +4,6 @@ import buhleWordmark from "../assets/buhle-wordmark.png";
 import { BUILD_VERSION } from "../data/version";
 
 const roleLabels: Record<string, string> = {
-  board: "Board Member",
   executive: "Executive Management",
   finance: "Finance",
   operations: "Operations / Academic",

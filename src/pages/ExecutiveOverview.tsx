@@ -19,20 +19,34 @@ const STRATEGIC_KPI_IDS = [
 
 function generateExecutiveInsight(): string[] {
   // Rule-based summary generation — NOT AI-generated. Picks the most material
-  // red/amber KPIs and states variance in plain language.
-  const flagged = DEMO_KPIS.filter((k) => getStatus(k) !== "green").sort(
+  // red/amber KPIs and states variance in plain language. KPIs with nothing
+  // submitted are excluded here (variance is meaningless) and surfaced
+  // separately as a data-quality gap instead.
+  const flagged = DEMO_KPIS.filter((k) => k.dataAvailable !== false && getStatus(k) !== "green").sort(
     (a, b) => Math.abs(b.currentValue - b.target) / b.target - Math.abs(a.currentValue - a.target) / a.target
   );
   return flagged.slice(0, 4).map((k) => k.insight);
 }
 
+function generateDataQualityNotes(): string[] {
+  return DEMO_KPIS.filter((k) => k.dataAvailable === false).map(
+    (k) => `${k.department}: "${k.name}" has not been submitted this period — ${k.insight}`
+  );
+}
+
 export function ExecutiveOverview() {
   const { user } = useAuth();
   const strategicKpis = STRATEGIC_KPI_IDS.map((id) => DEMO_KPIS.find((k) => k.id === id)!).filter(Boolean);
-  const counts = { green: 0, amber: 0, red: 0 };
+  const counts = { green: 0, amber: 0, red: 0, no_data: 0 };
   DEMO_KPIS.forEach((k) => counts[getStatus(k)]++);
   const total = DEMO_KPIS.length;
-  const score = Math.round(((counts.green * 100 + counts.amber * 55 + counts.red * 10) / (total * 100)) * 100);
+  // Organisational health is scored only over KPIs that actually have data —
+  // a missing figure is a data-quality problem, not evidence of good or bad
+  // performance, so it must not silently inflate or deflate the score.
+  const reportingTotal = total - counts.no_data;
+  const score = reportingTotal === 0
+    ? 0
+    : Math.round(((counts.green * 100 + counts.amber * 55 + counts.red * 10) / (reportingTotal * 100)) * 100);
 
   const criticalRisks = DEMO_RISKS.filter((r) => r.level === "red" && r.status !== "Resolved");
   const emergingRisks = DEMO_RISKS.filter((r) => r.level === "amber" && r.status !== "Resolved");
@@ -48,6 +62,7 @@ export function ExecutiveOverview() {
   const completedCount = DEMO_ACTIONS.filter((a) => a.status === "Completed").length;
 
   const insights = generateExecutiveInsight();
+  const dataQualityNotes = generateDataQualityNotes();
   const revenueKpi = DEMO_KPIS.find((k) => k.id === "kpi-revenue")!;
 
   return (
@@ -72,9 +87,14 @@ export function ExecutiveOverview() {
           <span className="rounded-full border border-ink/15 bg-white px-4 py-1.5 text-sm font-semibold text-ink-soft">
             {counts.green} On Target
           </span>
+          {counts.no_data > 0 && (
+            <span className="rounded-full border border-dashed border-ink/20 bg-white px-4 py-1.5 text-sm font-semibold text-ink-soft/50">
+              {counts.no_data} No Data
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-8">
-          <BigStat value={total} label="KPIs tracked" />
+          <BigStat value={`${reportingTotal}/${total}`} label="KPIs reporting" />
           <BigStat value={criticalRisks.length + emergingRisks.length} label="Active risks" />
           <BigStat value={overdue.length + upcoming.length} label="Actions due" />
         </div>
@@ -201,11 +221,27 @@ export function ExecutiveOverview() {
           ))}
         </ul>
       </section>
+
+      {dataQualityNotes.length > 0 && (
+        <section className="rounded-3xl border border-dashed border-ink/20 bg-white/40 p-6">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
+            Data Quality — Not Submitted
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {dataQualityNotes.map((text, i) => (
+              <li key={i} className="flex gap-2 text-sm text-ink-soft/60">
+                <span className="text-ink-soft/30">•</span>
+                {text}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
 
-function BigStat({ value, label }: { value: number; label: string }) {
+function BigStat({ value, label }: { value: number | string; label: string }) {
   return (
     <div className="text-right">
       <div className="text-3xl font-bold text-ink">{value}</div>

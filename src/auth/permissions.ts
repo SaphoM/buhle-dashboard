@@ -10,7 +10,7 @@ export interface NavItem {
 // Section 26/32: role-based navigation. Admin and Executive see everything;
 // department roles see their own area plus shared Risk/Actions/Reports views.
 export const NAV_ITEMS: NavItem[] = [
-  { path: "/", label: "Executive Overview", shortLabel: "Overview", roles: ["board", "executive", "admin"] },
+  { path: "/", label: "Executive Overview", shortLabel: "Overview", roles: ["executive", "admin"] },
   { path: "/finance", label: "Finance", shortLabel: "Finance", roles: ["executive", "finance", "admin"] },
   { path: "/operations", label: "Operations", shortLabel: "Operations", roles: ["executive", "operations", "admin"] },
   { path: "/farming", label: "Commercial Farming", shortLabel: "Farming", roles: ["executive", "farm", "admin"] },
@@ -21,7 +21,7 @@ export const NAV_ITEMS: NavItem[] = [
     path: "/risk-centre",
     label: "Early Warning / Risk Centre",
     shortLabel: "Risk Centre",
-    roles: ["board", "executive", "finance", "operations", "farm", "hr", "marketing", "alumni", "admin"],
+    roles: ["executive", "finance", "operations", "farm", "hr", "marketing", "alumni", "admin"],
   },
   {
     path: "/actions",
@@ -33,7 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
     path: "/reports",
     label: "Reports",
     shortLabel: "Reports",
-    roles: ["board", "executive", "finance", "operations", "farm", "hr", "marketing", "alumni", "admin"],
+    roles: ["executive", "finance", "operations", "farm", "hr", "marketing", "alumni", "admin"],
   },
   { path: "/admin", label: "Administration", shortLabel: "Settings", roles: ["admin"] },
 ];
@@ -44,7 +44,8 @@ export function canAccess(role: Role, path: string): boolean {
   return item.roles.includes(role);
 }
 
-// Board members must not see individual staff/student PII (Section 27).
-export function canViewPII(role: Role): boolean {
-  return role !== "board";
+// PII visibility rules (Section 27/35 — learner, alumni and employee
+// personal information) are not yet defined per-role. TO CONFIRM.
+export function canViewPII(_role: Role): boolean {
+  return true;
 }
