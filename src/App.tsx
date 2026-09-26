@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
-import { canAccess } from "./auth/permissions";
+import { canAccess, getHomePath } from "./auth/permissions";
 import { AppShell } from "./components/layout/AppShell";
 import { Login } from "./pages/Login";
 import { ExecutiveOverview } from "./pages/ExecutiveOverview";
@@ -36,7 +36,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/login" element={user ? <Navigate to={getHomePath(user.role)} replace /> : <Login />} />
       <Route path="/" element={<Protected path="/"><ExecutiveOverview /></Protected>} />
       <Route path="/finance" element={<Protected path="/finance"><Finance /></Protected>} />
       <Route path="/operations" element={<Protected path="/operations"><Operations /></Protected>} />
@@ -48,7 +48,7 @@ function AppRoutes() {
       <Route path="/actions" element={<Protected path="/actions"><CorrectiveActions /></Protected>} />
       <Route path="/reports" element={<Protected path="/reports"><Reports /></Protected>} />
       <Route path="/admin" element={<Protected path="/admin"><Administration /></Protected>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to={user ? getHomePath(user.role) : "/login"} replace />} />
     </Routes>
   );
 }

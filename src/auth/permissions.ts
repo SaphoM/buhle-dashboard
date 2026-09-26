@@ -44,6 +44,15 @@ export function canAccess(role: Role, path: string): boolean {
   return item.roles.includes(role);
 }
 
+// Where to land a role right after login — must be the first NAV_ITEMS
+// entry that role is actually permitted to see. Executive Overview is
+// executive/admin-only, so department roles need their own department page
+// as home, or they'd land on "/" and immediately hit the access-denied wall.
+export function getHomePath(role: Role): string {
+  const item = NAV_ITEMS.find((n) => n.roles.includes(role));
+  return item?.path ?? "/login";
+}
+
 // PII visibility rules (Section 27/35 — learner, alumni and employee
 // personal information) are not yet defined per-role. TO CONFIRM.
 export function canViewPII(_role: Role): boolean {
