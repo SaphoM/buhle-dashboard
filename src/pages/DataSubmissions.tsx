@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { DEMO_CYCLES } from "../data/cyclesData";
+import { useDataStore } from "../data/DataStoreContext";
 import { cycleBadgeStyle, cycleStatusMeaning, daysUntilDue, getEffectiveStatus } from "../data/cycleEngine";
 import type { CycleStatus, Department } from "../types";
 
@@ -16,19 +16,20 @@ const STATUS_ORDER: CycleStatus[] = [
 ];
 
 export function DataSubmissions() {
+  const { cycles: allCycles } = useDataStore();
   const [department, setDepartment] = useState<Department | "all">("all");
   const departments = useMemo(
-    () => Array.from(new Set(DEMO_CYCLES.map((c) => c.department))) as Department[],
-    []
+    () => Array.from(new Set(allCycles.map((c) => c.department))) as Department[],
+    [allCycles]
   );
 
-  const cycles = DEMO_CYCLES.filter((c) => department === "all" || c.department === department).sort((a, b) => {
+  const cycles = allCycles.filter((c) => department === "all" || c.department === department).sort((a, b) => {
     const sa = STATUS_ORDER.indexOf(getEffectiveStatus(a));
     const sb = STATUS_ORDER.indexOf(getEffectiveStatus(b));
     return sa - sb;
   });
 
-  const overdueCount = DEMO_CYCLES.filter((c) => getEffectiveStatus(c) === "Overdue").length;
+  const overdueCount = allCycles.filter((c) => getEffectiveStatus(c) === "Overdue").length;
 
   return (
     <div className="flex flex-col gap-6">

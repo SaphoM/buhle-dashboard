@@ -1,4 +1,6 @@
-import { DEMO_ACTIONS, DEMO_KPIS, DEMO_RISKS } from "../data/demoData";
+import { DEMO_ACTIONS, DEMO_RISKS } from "../data/demoData";
+import { useDataStore } from "../data/DataStoreContext";
+import type { Kpi } from "../types";
 import { KpiCard } from "../components/kpi/KpiCard";
 import { StatusBadge } from "../components/kpi/StatusBadge";
 import { CircularRing } from "../components/kpi/CircularRing";
@@ -17,29 +19,30 @@ const STRATEGIC_KPI_IDS = [
   "kpi-completion",
 ];
 
-function generateExecutiveInsight(): string[] {
+function generateExecutiveInsight(kpis: Kpi[]): string[] {
   // Rule-based summary generation — NOT AI-generated. Picks the most material
   // red/amber KPIs and states variance in plain language. KPIs with nothing
   // submitted are excluded here (variance is meaningless) and surfaced
   // separately as a data-quality gap instead.
-  const flagged = DEMO_KPIS.filter((k) => k.dataAvailable !== false && getStatus(k) !== "green").sort(
+  const flagged = kpis.filter((k) => k.dataAvailable !== false && getStatus(k) !== "green").sort(
     (a, b) => Math.abs(b.currentValue - b.target) / b.target - Math.abs(a.currentValue - a.target) / a.target
   );
   return flagged.slice(0, 4).map((k) => k.insight);
 }
 
-function generateDataQualityNotes(): string[] {
-  return DEMO_KPIS.filter((k) => k.dataAvailable === false).map(
+function generateDataQualityNotes(kpis: Kpi[]): string[] {
+  return kpis.filter((k) => k.dataAvailable === false).map(
     (k) => `${k.department}: "${k.name}" has not been submitted this period — ${k.insight}`
   );
 }
 
 export function ExecutiveOverview() {
   const { user } = useAuth();
-  const strategicKpis = STRATEGIC_KPI_IDS.map((id) => DEMO_KPIS.find((k) => k.id === id)!).filter(Boolean);
+  const { kpis: allKpis } = useDataStore();
+  const strategicKpis = STRATEGIC_KPI_IDS.map((id) => allKpis.find((k) => k.id === id)!).filter(Boolean);
   const counts = { green: 0, amber: 0, red: 0, no_data: 0 };
-  DEMO_KPIS.forEach((k) => counts[getStatus(k)]++);
-  const total = DEMO_KPIS.length;
+  allKpis.forEach((k) => counts[getStatus(k)]++);
+  const total = allKpis.length;
   // Organisational health is scored only over KPIs that actually have data —
   // a missing figure is a data-quality problem, not evidence of good or bad
   // performance, so it must not silently inflate or deflate the score.
@@ -61,9 +64,9 @@ export function ExecutiveOverview() {
   });
   const completedCount = DEMO_ACTIONS.filter((a) => a.status === "Completed").length;
 
-  const insights = generateExecutiveInsight();
-  const dataQualityNotes = generateDataQualityNotes();
-  const revenueKpi = DEMO_KPIS.find((k) => k.id === "kpi-revenue")!;
+  const insights = generateExecutiveInsight(allKpis);
+  const dataQualityNotes = generateDataQualityNotes(allKpis);
+  const revenueKpi = allKpis.find((k) => k.id === "kpi-revenue")!;
 
   return (
     <div className="flex flex-col gap-6">

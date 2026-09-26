@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
+import { DataStoreProvider } from "./data/DataStoreContext";
 import { canAccess, getHomePath } from "./auth/permissions";
 import { AppShell } from "./components/layout/AppShell";
 import { Login } from "./pages/Login";
@@ -58,7 +59,9 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <DataStoreProvider>
+        <AppRoutes />
+      </DataStoreProvider>
     </AuthProvider>
   );
 }

@@ -1,12 +1,14 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { Department } from "../../types";
-import { DEMO_KPIS, DEMO_RISKS, DEMO_ACTIONS } from "../../data/demoData";
-import { DEMO_CYCLES } from "../../data/cyclesData";
+import { DEMO_RISKS, DEMO_ACTIONS } from "../../data/demoData";
+import { useDataStore } from "../../data/DataStoreContext";
 import { cycleBadgeStyle, daysUntilDue, getEffectiveStatus } from "../../data/cycleEngine";
 import { KpiCard } from "../kpi/KpiCard";
 import { StatusBadge } from "../kpi/StatusBadge";
 import { DataFreshnessTag } from "../common/DataFreshnessTag";
 import { getStatus } from "../../data/kpiEngine";
+import { SubmitDataModal } from "./SubmitDataModal";
 
 export function DepartmentDashboard({
   department,
@@ -15,13 +17,16 @@ export function DepartmentDashboard({
   department: Department;
   description: string;
 }) {
-  const kpis = DEMO_KPIS.filter((k) => k.department === department);
+  const { kpis: allKpis, cycles: allCycles } = useDataStore();
+  const [modalOpen, setModalOpen] = useState(false);
+  const kpis = allKpis.filter((k) => k.department === department);
   const risks = DEMO_RISKS.filter((r) => r.department === department && r.status !== "Resolved");
   const actionMap = new Map(DEMO_ACTIONS.map((a) => [a.riskId, a]));
 
   // Section 47: proactively tell the manager what's due next, rather than
   // relying on them to remember. Overdue first, then the soonest due date.
-  const deptCycles = DEMO_CYCLES.filter((c) => c.department === department)
+  const deptCycles = allCycles
+    .filter((c) => c.department === department)
     .map((c) => ({ cycle: c, status: getEffectiveStatus(c) }))
     .filter(({ status }) => status !== "Accepted" && status !== "Closed")
     .sort((a, b) => new Date(a.cycle.dueDate).getTime() - new Date(b.cycle.dueDate).getTime());
@@ -34,21 +39,37 @@ export function DepartmentDashboard({
           <h1 className="text-2xl font-bold tracking-tight text-ink">{department}</h1>
           <p className="text-sm text-ink-soft/60">{description}</p>
         </div>
-        <DataFreshnessTag label="Updated today" source="Demo dataset" />
+        <div className="flex items-center gap-3">
+          <DataFreshnessTag label="Updated today" source="Demo dataset" />
+          <button
+            onClick={() => setModalOpen(true)}
+            className="rounded-full bg-ink px-4 py-2 text-xs font-semibold text-butter hover:bg-ink-soft"
+          >
+            Submit Data
+          </button>
+        </div>
       </div>
 
       {nextCycle && (
         <div className="card-surface flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-ink/10 p-5 shadow-sm">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft/50">
-              {nextCycle.status === "Overdue" ? "Overdue submission" : "Your next data submission is due"}
+              {nextCycle.status === "Overdue"
+                ? "Overdue submission"
+                : nextCycle.status === "Submitted" || nextCycle.status === "Validation Required"
+                ? "Awaiting review"
+                : "Your next data submission is due"}
             </p>
             <p className="mt-1 text-sm font-medium text-ink">
               {nextCycle.cycle.dataset} — {nextCycle.cycle.reportingPeriod}
             </p>
             <p className="text-xs text-ink-soft/50">
               {nextCycle.cycle.description} Due {new Date(nextCycle.cycle.dueDate).toLocaleDateString("en-ZA")}
-              {nextCycle.status !== "Overdue" && ` (${daysUntilDue(nextCycle.cycle)} days left)`}.
+              {nextCycle.status !== "Overdue" &&
+                nextCycle.status !== "Submitted" &&
+                nextCycle.status !== "Validation Required" &&
+                ` (${daysUntilDue(nextCycle.cycle)} days left)`}
+              .
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -113,15 +134,17 @@ export function DepartmentDashboard({
           )}
         </div>
       </section>
+
+      <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }
 
-export function departmentHealthCounts(department: Department) {
-  const kpis = DEMO_KPIS.filter((k) => k.department === department);
+export function departmentHealthCounts(department: Department, kpis: ReturnType<typeof useDataStore>["kpis"]) {
+  const deptKpis = kpis.filter((k) => k.department === department);
   return {
-    green: kpis.filter((k) => getStatus(k) === "green").length,
-    amber: kpis.filter((k) => getStatus(k) === "amber").length,
-    red: kpis.filter((k) => getStatus(k) === "red").length,
+    green: deptKpis.filter((k) => getStatus(k) === "green").length,
+    amber: deptKpis.filter((k) => getStatus(k) === "amber").length,
+    red: deptKpis.filter((k) => getStatus(k) === "red").length,
   };
 }
