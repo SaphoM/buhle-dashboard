@@ -13,6 +13,7 @@ import { Alumni } from "./pages/Alumni";
 import { RiskCentre } from "./pages/RiskCentre";
 import { CorrectiveActions } from "./pages/CorrectiveActions";
 import { Reports } from "./pages/Reports";
+import { DataSubmissions } from "./pages/DataSubmissions";
 import { Administration } from "./pages/Administration";
 
 function Protected({ path, children }: { path: string; children: React.ReactNode }) {
@@ -47,6 +48,7 @@ function AppRoutes() {
       <Route path="/risk-centre" element={<Protected path="/risk-centre"><RiskCentre /></Protected>} />
       <Route path="/actions" element={<Protected path="/actions"><CorrectiveActions /></Protected>} />
       <Route path="/reports" element={<Protected path="/reports"><Reports /></Protected>} />
+      <Route path="/data" element={<Protected path="/data"><DataSubmissions /></Protected>} />
       <Route path="/admin" element={<Protected path="/admin"><Administration /></Protected>} />
       <Route path="*" element={<Navigate to={user ? getHomePath(user.role) : "/login"} replace />} />
     </Routes>

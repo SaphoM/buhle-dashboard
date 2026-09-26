@@ -35,6 +35,12 @@ export const NAV_ITEMS: NavItem[] = [
     shortLabel: "Reports",
     roles: ["executive", "finance", "operations", "farm", "hr", "marketing", "alumni", "admin"],
   },
+  {
+    path: "/data",
+    label: "Data / Submissions",
+    shortLabel: "Data",
+    roles: ["executive", "finance", "operations", "farm", "hr", "marketing", "alumni", "admin"],
+  },
   { path: "/admin", label: "Administration", shortLabel: "Settings", roles: ["admin"] },
 ];
 

@@ -117,3 +117,55 @@ export interface DataFreshness {
   frequency: string;
   status: "live" | "updated_today" | "updated_yesterday" | "needs_attention";
 }
+
+// ----------------------------------------------------------------------------
+// Cyclical Departmental Data Collection (Sept 2026 discovery brief, Sections
+// 47–49). The application must not depend on managers remembering what's
+// due — every recurring dataset a department owns is modelled as a cycle
+// with its own frequency, reporting period and status, so the system can
+// proactively say "your next submission is due" instead of staying silent.
+// ----------------------------------------------------------------------------
+
+export type ReportingFrequency =
+  | "Daily"
+  | "Weekly"
+  | "Monthly"
+  | "Quarterly"
+  | "Annually"
+  | "Per Event"
+  | "Per Cohort"
+  | "Per Season"
+  | "Per Campaign"
+  | "Per Batch"
+  | "Per Project Milestone"
+  | "6 Months After Graduation"
+  | "Annually After Graduation";
+
+export type CycleStatus =
+  | "Upcoming"
+  | "Open"
+  | "In Progress"
+  | "Submitted"
+  | "Validation Required"
+  | "Accepted"
+  | "Returned"
+  | "Overdue"
+  | "Closed";
+
+export interface DataCollectionCycle {
+  cycleId: string;
+  department: Department;
+  dataset: string; // what's being collected, e.g. "Budget Monitor (Actuals)"
+  description: string; // what records/information this cycle actually needs
+  frequency: ReportingFrequency;
+  reportingPeriod: string; // e.g. "September 2026", "Q3 2026", "2026/27 Summer Season"
+  startDate: string; // ISO date — when the cycle opens for entry
+  dueDate: string; // ISO date
+  status: CycleStatus; // manually-set baseline; overdue is derived at render time
+  owner: string;
+  completionPct: number; // 0-100
+  submissionDate?: string;
+  submittedBy?: string;
+  validationStatus?: "Not Reviewed" | "Reviewed" | "Queried";
+  notes?: string;
+}
