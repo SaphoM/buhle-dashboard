@@ -82,7 +82,7 @@ export function SubmitDataModal({
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-ink-soft/60">This submission fulfils</span>
               <select
-                className="rounded-2xl border border-ink/10 bg-white/70 px-4 py-2.5 text-sm text-ink"
+                className="whitespace-nowrap rounded-full bg-ink px-7 py-2 text-sm font-semibold text-butter hover:bg-ink-soft"
                 value={cycleId}
                 onChange={(e) => setCycleId(e.target.value)}
               >

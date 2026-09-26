@@ -50,7 +50,7 @@ export function DataSubmissions() {
 
       <div className="flex flex-wrap gap-3">
         <select
-          className="rounded-full border border-ink/10 bg-white/80 px-4 py-2 text-sm text-ink"
+          className="whitespace-nowrap rounded-full bg-ink px-7 py-2 text-sm font-semibold text-butter hover:bg-ink-soft"
           value={department}
           onChange={(e) => setDepartment(e.target.value as Department | "all")}
         >
