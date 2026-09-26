@@ -117,7 +117,7 @@ export function SubmitDataModal({
                       type="number"
                       step="any"
                       placeholder={k.dataAvailable === false ? "Not yet submitted" : undefined}
-                      className="w-full rounded-2xl border border-ink/10 bg-white/70 px-4 py-2 text-sm text-ink placeholder:text-ink-soft/30 outline-none focus:border-butter-dark"
+                      className="w-full rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-sm text-ink placeholder:text-ink-soft/30 outline-none focus:border-butter-dark"
                       value={values[k.id] ?? ""}
                       onChange={(e) => setValues((prev) => ({ ...prev, [k.id]: e.target.value }))}
                     />
