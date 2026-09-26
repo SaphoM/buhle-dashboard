@@ -49,7 +49,7 @@ export function Login() {
               placeholder="name@buhlefarmersacademy.co.za"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-2xl border border-ink/10 bg-white/70 px-4 py-2.5 text-sm text-ink placeholder:text-ink-soft/30 outline-none focus:border-butter-dark"
+              className="rounded-full border border-ink/10 bg-white/70 px-4 py-2.5 text-sm text-ink placeholder:text-ink-soft/30 outline-none focus:border-butter-dark"
             />
           </label>
           <label className="flex flex-col gap-1 text-left">
@@ -60,7 +60,7 @@ export function Login() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-2xl border border-ink/10 bg-white/70 px-4 py-2.5 text-sm text-ink placeholder:text-ink-soft/30 outline-none focus:border-butter-dark"
+              className="rounded-full border border-ink/10 bg-white/70 px-4 py-2.5 text-sm text-ink placeholder:text-ink-soft/30 outline-none focus:border-butter-dark"
             />
           </label>
           <button
