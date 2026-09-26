@@ -43,7 +43,7 @@ export function DepartmentDashboard({
           <DataFreshnessTag label="Updated today" source="Demo dataset" />
           <button
             onClick={() => setModalOpen(true)}
-            className="whitespace-nowrap rounded-full bg-ink px-7 py-3.5 text-sm font-semibold text-butter hover:bg-ink-soft"
+            className="whitespace-nowrap rounded-full bg-ink px-7 py-2 text-sm font-semibold text-butter hover:bg-ink-soft"
           >
             Submit Data
           </button>
