@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { DEMO_RISKS } from "../data/demoData";
 import { StatusBadge } from "../components/kpi/StatusBadge";
+import { SelectChevron } from "../components/common/SelectChevron";
 import type { Department, RiskCategory, RiskLevel } from "../types";
 
 const LEVELS: RiskLevel[] = ["red", "amber", "green"];
@@ -33,30 +34,36 @@ export function RiskCentre() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <select
-          className="whitespace-nowrap rounded-full bg-ink px-7 py-2 text-sm font-semibold text-butter hover:bg-ink-soft"
-          value={department}
-          onChange={(e) => setDepartment(e.target.value as Department | "all")}
-        >
-          <option value="all">All Departments</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-        <select
-          className="whitespace-nowrap rounded-full bg-ink px-7 py-2 text-sm font-semibold text-butter hover:bg-ink-soft"
-          value={category}
-          onChange={(e) => setCategory(e.target.value as RiskCategory | "all")}
-        >
-          <option value="all">All Categories</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            className="whitespace-nowrap appearance-none rounded-full bg-ink py-2 pl-7 pr-10 text-sm font-semibold text-butter hover:bg-ink-soft"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value as Department | "all")}
+          >
+            <option value="all">All Departments</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
+        <div className="relative">
+          <select
+            className="whitespace-nowrap appearance-none rounded-full bg-ink py-2 pl-7 pr-10 text-sm font-semibold text-butter hover:bg-ink-soft"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as RiskCategory | "all")}
+          >
+            <option value="all">All Categories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
       </div>
 
       {LEVELS.map((level) => {

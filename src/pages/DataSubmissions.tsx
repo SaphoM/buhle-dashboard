@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useDataStore } from "../data/DataStoreContext";
 import { cycleBadgeStyle, cycleStatusMeaning, daysUntilDue, getEffectiveStatus } from "../data/cycleEngine";
+import { SelectChevron } from "../components/common/SelectChevron";
 import type { CycleStatus, Department } from "../types";
 
 const STATUS_ORDER: CycleStatus[] = [
@@ -49,18 +50,21 @@ export function DataSubmissions() {
       )}
 
       <div className="flex flex-wrap gap-3">
-        <select
-          className="whitespace-nowrap rounded-full bg-ink px-7 py-2 text-sm font-semibold text-butter hover:bg-ink-soft"
-          value={department}
-          onChange={(e) => setDepartment(e.target.value as Department | "all")}
-        >
-          <option value="all">All Departments</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            className="whitespace-nowrap appearance-none rounded-full bg-ink py-2 pl-7 pr-10 text-sm font-semibold text-butter hover:bg-ink-soft"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value as Department | "all")}
+          >
+            <option value="all">All Departments</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
       </div>
 
       <div className="card-surface overflow-hidden rounded-3xl border border-ink/10 shadow-sm">

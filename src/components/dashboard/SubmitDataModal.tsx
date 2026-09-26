@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { Department } from "../../types";
 import { Modal } from "../common/Modal";
+import { SelectChevron } from "../common/SelectChevron";
 import { useDataStore } from "../../data/DataStoreContext";
 import { useAuth } from "../../auth/AuthContext";
 import { getEffectiveStatus } from "../../data/cycleEngine";
@@ -81,17 +82,20 @@ export function SubmitDataModal({
           {openCycles.length > 0 && (
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-ink-soft/60">This submission fulfils</span>
-              <select
-                className="h-[35px] w-full rounded-full bg-ink px-4 text-sm font-semibold text-butter hover:bg-ink-soft"
-                value={cycleId}
-                onChange={(e) => setCycleId(e.target.value)}
-              >
-                {openCycles.map((c) => (
-                  <option key={c.cycleId} value={c.cycleId}>
-                    {c.dataset} — {c.reportingPeriod}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  className="h-[35px] w-full appearance-none rounded-full bg-ink pl-4 pr-9 text-sm font-semibold text-butter hover:bg-ink-soft"
+                  value={cycleId}
+                  onChange={(e) => setCycleId(e.target.value)}
+                >
+                  {openCycles.map((c) => (
+                    <option key={c.cycleId} value={c.cycleId}>
+                      {c.dataset} — {c.reportingPeriod}
+                    </option>
+                  ))}
+                </select>
+                <SelectChevron />
+              </div>
             </label>
           )}
 
