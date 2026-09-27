@@ -23,6 +23,9 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     owner: "Finance Manager",
     completionPct: 65,
     notes: "Confirmed cadence — the real Budget Monitor workbook is updated monthly per the Finance discovery questionnaire.",
+    // Closest existing analogue to "Budget Remaining" (Section 52's Finance
+    // example) — the app does not yet model a literal budget-remaining KPI.
+    primaryKpiId: "kpi-surplus",
   },
   {
     cycleId: "cyc-hr-2026-q3",
@@ -37,6 +40,7 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     owner: "HR Manager",
     completionPct: 70,
     notes: "Confirmed cadence — Q1/Q2/Q3 2026 sheets already exist in the real HR workbook.",
+    primaryKpiId: "kpi-turnover",
   },
   {
     cycleId: "cyc-hr-attendance-2026-09",
@@ -54,6 +58,7 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     owner: "HR Manager",
     completionPct: 0,
     notes: "No digital system exists yet — see the Staff Absenteeism Rate KPI (No Data) and the Administration → To Confirm Register.",
+    primaryKpiId: "kpi-absenteeism",
   },
   {
     cycleId: "cyc-operations-2026-t3",
@@ -68,6 +73,7 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     owner: "Head of Training",
     completionPct: 0,
     notes: "No Operations/Training discovery questionnaire has been submitted yet.",
+    primaryKpiId: "kpi-enrolment",
   },
   {
     cycleId: "cyc-farming-2026-summer",
@@ -82,6 +88,7 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     owner: "Farm Manager",
     completionPct: 0,
     notes: "No Commercial Farming discovery questionnaire has been submitted yet.",
+    primaryKpiId: "kpi-mortality",
   },
   {
     cycleId: "cyc-marketing-2026-09",
@@ -96,6 +103,7 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     owner: "Marketing Manager",
     completionPct: 0,
     notes: "No Marketing discovery questionnaire has been submitted yet.",
+    primaryKpiId: "kpi-enquiries",
   },
   {
     cycleId: "cyc-alumni-2026-h2",
@@ -110,5 +118,6 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     owner: "Alumni Coordinator",
     completionPct: 0,
     notes: "No Alumni discovery questionnaire has been submitted yet.",
+    primaryKpiId: "kpi-alumni",
   },
 ];

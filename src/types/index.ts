@@ -168,4 +168,21 @@ export interface DataCollectionCycle {
   submittedBy?: string;
   validationStatus?: "Not Reviewed" | "Reviewed" | "Queried";
   notes?: string;
+  // Section 52: the department/dataset-relevant KPI that acts as this
+  // cycle's Early Warning Indicator — shown in the submission modal so the
+  // manager sees exactly what will be evaluated from what they're about to
+  // submit, not a generic list of every indicator in the system.
+  primaryKpiId?: string;
+  // Section 54: how many days before dueDate the submission EWS turns Amber
+  // ("Due Soon"). Admin-configurable per cycle; defaults to 7 if unset.
+  dueSoonDays?: number;
+  // Section 51: true once an authorised user has manually overridden the
+  // calculated next-submission date, so the UI can say so and audit it.
+  nextDateOverridden?: boolean;
 }
+
+// Section 55: the two warning types must never be conflated. A submission
+// warning ("you haven't sent us the data") and a performance warning
+// ("the data you sent shows a problem") mean very different things to a
+// manager and call for different responses.
+export type EwsKind = "submission" | "performance";

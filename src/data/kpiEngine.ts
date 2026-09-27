@@ -9,14 +9,24 @@ import type { Kpi, RagStatus, TrendDirection } from "../types";
  */
 export function getStatus(kpi: Kpi): RagStatus {
   if (kpi.dataAvailable === false) return "no_data";
-  const { currentValue, greenThreshold, amberThreshold, lowerIsBetter } = kpi;
+  return getStatusForValue(kpi, kpi.currentValue);
+}
+
+/**
+ * Section 53: "the application must calculate the resulting RAG status" —
+ * evaluates an arbitrary candidate value against a KPI's own thresholds,
+ * so the submission modal can show a live status as the manager types,
+ * before that value has actually been saved as the KPI's currentValue.
+ */
+export function getStatusForValue(kpi: Kpi, value: number): RagStatus {
+  const { greenThreshold, amberThreshold, lowerIsBetter } = kpi;
   if (lowerIsBetter) {
-    if (currentValue <= greenThreshold) return "green";
-    if (currentValue <= amberThreshold) return "amber";
+    if (value <= greenThreshold) return "green";
+    if (value <= amberThreshold) return "amber";
     return "red";
   }
-  if (currentValue >= greenThreshold) return "green";
-  if (currentValue >= amberThreshold) return "amber";
+  if (value >= greenThreshold) return "green";
+  if (value >= amberThreshold) return "amber";
   return "red";
 }
 

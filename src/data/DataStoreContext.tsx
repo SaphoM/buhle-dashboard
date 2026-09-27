@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import type { Kpi, DataCollectionCycle } from "../types";
 import { DEMO_KPIS } from "./demoData";
 import { DEMO_CYCLES } from "./cyclesData";
+import { computeNextDueDate, deriveNextReportingPeriod } from "./cycleEngine";
 
 // Lifts the KPI and Cycle demo arrays into React state so a department
 // manager's submission (via the Input Modal — Section 47) actually flows
@@ -13,8 +14,14 @@ interface DataStoreValue {
   cycles: DataCollectionCycle[];
   /** Records a value for a KPI — clears "no data" and shifts history forward. */
   submitKpiValue: (kpiId: string, newValue: number) => void;
-  /** Marks a cycle as submitted by the given user, right now. */
-  submitCycle: (cycleId: string, submittedBy: string) => void;
+  /**
+   * Marks a cycle as submitted, then re-evaluates the cycle engine (Section
+   * 62): calculates the next submission date and opens the next cycle
+   * automatically, so nobody has to manually schedule it.
+   */
+  submitCycle: (cycleId: string, submittedBy: string, nextDueDateOverride?: string) => void;
+  /** Section 51: an authorised user manually overrides a calculated due date. */
+  overrideCycleDueDate: (cycleId: string, newDueDate: string) => void;
 }
 
 const DataStoreContext = createContext<DataStoreValue | undefined>(undefined);
@@ -47,20 +54,50 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           })
         );
       },
-      submitCycle: (cycleId, submittedBy) => {
-        setCycles((prev) =>
-          prev.map((c) =>
+      submitCycle: (cycleId, submittedBy, nextDueDateOverride) => {
+        setCycles((prev) => {
+          const submitted = prev.find((c) => c.cycleId === cycleId);
+          const updated = prev.map((c) =>
             c.cycleId === cycleId
               ? {
                   ...c,
-                  status: "Submitted",
+                  status: "Submitted" as const,
                   completionPct: 100,
                   submissionDate: new Date().toISOString().slice(0, 10),
                   submittedBy,
-                  validationStatus: "Not Reviewed",
+                  validationStatus: "Not Reviewed" as const,
                 }
               : c
-          )
+          );
+          const alreadySubmitted = ["Submitted", "Validation Required", "Accepted", "Closed"].includes(
+            submitted?.status ?? ""
+          );
+          if (!submitted || alreadySubmitted) return updated;
+          // Section 62, steps 10-11: calculate the next submission date and
+          // open the next cycle automatically — the manager should never
+          // have to schedule their own next submission. Section 51: an
+          // authorised user may override that calculated date instead.
+          const nextDueDate = nextDueDateOverride || computeNextDueDate(submitted);
+          const nextPeriod = deriveNextReportingPeriod(submitted, nextDueDate);
+          const nextCycle: DataCollectionCycle = {
+            ...submitted,
+            cycleId: `${submitted.cycleId}__next-${nextDueDate}`,
+            reportingPeriod: nextPeriod,
+            startDate: submitted.dueDate,
+            dueDate: nextDueDate,
+            status: "Upcoming",
+            completionPct: 0,
+            submissionDate: undefined,
+            submittedBy: undefined,
+            validationStatus: undefined,
+            nextDateOverridden: Boolean(nextDueDateOverride),
+          };
+          return [...updated, nextCycle];
+        });
+      },
+      overrideCycleDueDate: (cycleId, newDueDate) => {
+        setCycles((prev) =>
+          prev.map((c) => (c.cycleId === cycleId ? { ...c, dueDate: newDueDate, nextDateOverridden: true } : c))
         );
       },
     }),

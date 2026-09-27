@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import type { Department } from "../../types";
 import { DEMO_RISKS, DEMO_ACTIONS } from "../../data/demoData";
 import { useDataStore } from "../../data/DataStoreContext";
-import { cycleBadgeStyle, daysUntilDue, getEffectiveStatus } from "../../data/cycleEngine";
+import { daysUntilDue, getEffectiveStatus, getSubmissionEwsStatus } from "../../data/cycleEngine";
 import { KpiCard } from "../kpi/KpiCard";
 import { StatusBadge } from "../kpi/StatusBadge";
 import { CircularRing } from "../kpi/CircularRing";
@@ -73,40 +73,42 @@ export function DepartmentDashboard({
       </div>
 
       {nextCycle && (
-        <div className="card-surface flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-ink/10 p-5 shadow-sm">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft/50">
-              {nextCycle.status === "Overdue"
-                ? "Overdue submission"
-                : nextCycle.status === "Submitted" || nextCycle.status === "Validation Required"
-                ? "Awaiting review"
-                : "Your next data submission is due"}
-            </p>
-            <p className="mt-1 text-sm font-medium text-ink">
-              {nextCycle.cycle.dataset} — {nextCycle.cycle.reportingPeriod}
-            </p>
-            <p className="text-xs text-ink-soft/50">
-              {nextCycle.cycle.description} Due {new Date(nextCycle.cycle.dueDate).toLocaleDateString("en-ZA")}
-              {nextCycle.status !== "Overdue" &&
-                nextCycle.status !== "Submitted" &&
-                nextCycle.status !== "Validation Required" &&
-                ` (${daysUntilDue(nextCycle.cycle)} days left)`}
-              .
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${cycleBadgeStyle(nextCycle.status)}`}>
-              {nextCycle.status}
-            </span>
+        <section className="card-surface rounded-3xl border border-ink/10 p-5 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft/50">
+              Data Submission <span className="normal-case text-ink-soft/40">— is the department reporting on time?</span>
+            </h2>
             <Link to="/data" className="text-xs font-semibold text-ink hover:underline">
               View all submissions →
             </Link>
           </div>
-        </div>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-x-8 gap-y-2">
+              <Field label="Current period" value={nextCycle.cycle.reportingPeriod} />
+              <Field label="Status" value={nextCycle.status} />
+              <Field
+                label="Next submission"
+                value={new Date(nextCycle.cycle.dueDate).toLocaleDateString("en-ZA")}
+              />
+              <Field
+                label={nextCycle.status === "Overdue" ? "Overdue by" : "Due in"}
+                value={`${Math.abs(daysUntilDue(nextCycle.cycle))} day${Math.abs(daysUntilDue(nextCycle.cycle)) === 1 ? "" : "s"}`}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-ink-soft/50">Submission Early Warning</span>
+              <StatusBadge status={getSubmissionEwsStatus(nextCycle.cycle)} />
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-ink-soft/40">{nextCycle.cycle.description}</p>
+        </section>
       )}
 
       {total > 0 && (
         <>
+          <h2 className="-mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft/50">
+            Business Performance <span className="normal-case text-ink-soft/40">— is what was submitted actually on target?</span>
+          </h2>
           {/* Stat pills row — same read as the Executive Overview, scoped to this department */}
           <div className="flex flex-wrap items-center justify-between gap-6 rounded-3xl border border-ink/10 bg-white/60 px-6 py-5">
             <div className="flex flex-wrap items-center gap-3">
@@ -246,6 +248,15 @@ export function DepartmentDashboard({
       </section>
 
       <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wide text-ink-soft/40">{label}</div>
+      <div className="text-sm font-semibold text-ink">{value}</div>
     </div>
   );
 }

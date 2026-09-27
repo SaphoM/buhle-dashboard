@@ -1,11 +1,12 @@
 import { DEMO_ACTIONS, DEMO_RISKS } from "../data/demoData";
 import { useDataStore } from "../data/DataStoreContext";
-import type { Kpi } from "../types";
+import type { Department, Kpi } from "../types";
 import { KpiCard } from "../components/kpi/KpiCard";
 import { StatusBadge } from "../components/kpi/StatusBadge";
 import { CircularRing } from "../components/kpi/CircularRing";
 import { MiniBarTrend } from "../components/kpi/MiniBarTrend";
 import { getStatus } from "../data/kpiEngine";
+import { daysUntilDue, getEffectiveStatus, getSubmissionEwsStatus } from "../data/cycleEngine";
 import { DataFreshnessTag } from "../components/common/DataFreshnessTag";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -38,7 +39,21 @@ function generateDataQualityNotes(kpis: Kpi[]): string[] {
 
 export function ExecutiveOverview() {
   const { user } = useAuth();
-  const { kpis: allKpis } = useDataStore();
+  const { kpis: allKpis, cycles: allCycles } = useDataStore();
+
+  // Section 57 — one row per department: the soonest-due cycle that isn't
+  // closed, so the Executive can see at a glance who has submitted, who's
+  // due soon, and who's overdue, without opening each department.
+  const departmentsWithCycles = Array.from(new Set(allCycles.map((c) => c.department)));
+  const submissionRows = departmentsWithCycles
+    .map((dept) => {
+      const deptCycles = allCycles
+        .filter((c) => c.department === dept)
+        .filter((c) => !["Accepted", "Closed"].includes(getEffectiveStatus(c)))
+        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+      return deptCycles[0] ? { department: dept, cycle: deptCycles[0] } : null;
+    })
+    .filter((row): row is { department: Department; cycle: (typeof allCycles)[number] } => row !== null);
   const strategicKpis = STRATEGIC_KPI_IDS.map((id) => allKpis.find((k) => k.id === id)!).filter(Boolean);
   const counts = { green: 0, amber: 0, red: 0, no_data: 0 };
   allKpis.forEach((k) => counts[getStatus(k)]++);
@@ -161,6 +176,48 @@ export function ExecutiveOverview() {
           </Link>
         </div>
       </div>
+
+      {/* Section 57: consolidated view of departmental submission status */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
+          Departmental Submission Status <span className="normal-case text-ink-soft/40">— is the data current?</span>
+        </h2>
+        <div className="card-surface overflow-hidden rounded-3xl border border-ink/10 shadow-sm">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-ink/10 bg-ink/[0.03] text-xs uppercase text-ink-soft/40">
+              <tr>
+                <th className="px-4 py-2.5 font-medium">Department</th>
+                <th className="px-4 py-2.5 font-medium">Current Period</th>
+                <th className="px-4 py-2.5 font-medium">Submission Status</th>
+                <th className="px-4 py-2.5 font-medium">Next Submission</th>
+                <th className="px-4 py-2.5 font-medium">Submission EWS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {submissionRows.map(({ department, cycle }) => {
+                const status = getEffectiveStatus(cycle);
+                const days = daysUntilDue(cycle);
+                return (
+                  <tr key={department} className="border-b border-ink/5 last:border-0">
+                    <td className="px-4 py-3 font-medium text-ink">{department}</td>
+                    <td className="px-4 py-3 text-ink-soft/70">{cycle.reportingPeriod}</td>
+                    <td className="px-4 py-3 text-ink-soft/70">{status}</td>
+                    <td className="px-4 py-3 text-ink-soft/70">
+                      {new Date(cycle.dueDate).toLocaleDateString("en-ZA")}
+                      <span className="ml-1 text-xs text-ink-soft/40">
+                        ({status === "Overdue" ? `${Math.abs(days)}d overdue` : `${days}d left`})
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={getSubmissionEwsStatus(cycle)} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {/* Strategic KPIs */}
       <section>
