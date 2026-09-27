@@ -6,8 +6,10 @@ import { useDataStore } from "../../data/DataStoreContext";
 import { cycleBadgeStyle, daysUntilDue, getEffectiveStatus } from "../../data/cycleEngine";
 import { KpiCard } from "../kpi/KpiCard";
 import { StatusBadge } from "../kpi/StatusBadge";
+import { CircularRing } from "../kpi/CircularRing";
+import { MiniBarTrend } from "../kpi/MiniBarTrend";
 import { DataFreshnessTag } from "../common/DataFreshnessTag";
-import { getStatus } from "../../data/kpiEngine";
+import { formatValue, getStatus } from "../../data/kpiEngine";
 import { SubmitDataModal } from "./SubmitDataModal";
 
 export function DepartmentDashboard({
@@ -20,8 +22,11 @@ export function DepartmentDashboard({
   const { kpis: allKpis, cycles: allCycles } = useDataStore();
   const [modalOpen, setModalOpen] = useState(false);
   const kpis = allKpis.filter((k) => k.department === department);
-  const risks = DEMO_RISKS.filter((r) => r.department === department && r.status !== "Resolved");
+  const allDeptRisks = DEMO_RISKS.filter((r) => r.department === department);
+  const risks = allDeptRisks.filter((r) => r.status !== "Resolved");
   const actionMap = new Map(DEMO_ACTIONS.map((a) => [a.riskId, a]));
+  const riskIds = new Set(allDeptRisks.map((r) => r.id));
+  const deptActions = DEMO_ACTIONS.filter((a) => riskIds.has(a.riskId));
 
   // Section 47: proactively tell the manager what's due next, rather than
   // relying on them to remember. Overdue first, then the soonest due date.
@@ -31,6 +36,23 @@ export function DepartmentDashboard({
     .filter(({ status }) => status !== "Accepted" && status !== "Closed")
     .sort((a, b) => new Date(a.cycle.dueDate).getTime() - new Date(b.cycle.dueDate).getTime());
   const nextCycle = deptCycles[0];
+
+  // Department health widgets — same language as the Executive Overview,
+  // scoped to this department, so managers get the same at-a-glance read.
+  const counts = { green: 0, amber: 0, red: 0, no_data: 0 };
+  kpis.forEach((k) => counts[getStatus(k)]++);
+  const total = kpis.length;
+  const reportingTotal = total - counts.no_data;
+  const score =
+    reportingTotal === 0
+      ? 0
+      : Math.round(((counts.green * 100 + counts.amber * 55 + counts.red * 10) / (reportingTotal * 100)) * 100);
+
+  const criticalRisks = risks.filter((r) => r.level === "red");
+  const emergingRisks = risks.filter((r) => r.level === "amber");
+
+  const spotlightKpi = kpis.find((k) => k.dataAvailable !== false) ?? kpis[0];
+  const completedActions = deptActions.filter((a) => a.status === "Completed").length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,6 +103,94 @@ export function DepartmentDashboard({
             </Link>
           </div>
         </div>
+      )}
+
+      {total > 0 && (
+        <>
+          {/* Stat pills row — same read as the Executive Overview, scoped to this department */}
+          <div className="flex flex-wrap items-center justify-between gap-6 rounded-3xl border border-ink/10 bg-white/60 px-6 py-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-medium uppercase tracking-wide text-ink-soft/50">KPI status</span>
+              <span className="rounded-full bg-ink px-4 py-1.5 text-sm font-semibold text-butter">{counts.red} Critical</span>
+              <span className="rounded-full bg-butter px-4 py-1.5 text-sm font-semibold text-ink">{counts.amber} Emerging</span>
+              <span className="rounded-full border border-ink/15 bg-white px-4 py-1.5 text-sm font-semibold text-ink-soft">
+                {counts.green} On Target
+              </span>
+              {counts.no_data > 0 && (
+                <span className="rounded-full border border-dashed border-ink/20 bg-white px-4 py-1.5 text-sm font-semibold text-ink-soft/50">
+                  {counts.no_data} No Data
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-8">
+              <BigStat value={`${reportingTotal}/${total}`} label="KPIs reporting" />
+              <BigStat value={criticalRisks.length + emergingRisks.length} label="Active risks" />
+            </div>
+          </div>
+
+          {/* Widget row — health ring / primary KPI trend / risk pulse / actions */}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
+            <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-ink p-6 text-center shadow-sm">
+              <CircularRing value={score} size={120} stroke={10} label={`${score}`} sublabel="/ 100" />
+              <div>
+                <p className="text-sm font-semibold text-white">Department Health</p>
+                <p className="text-xs text-white/50">
+                  {score >= 75 ? "Healthy" : score >= 55 ? "Needs Attention" : "Critical — Act Now"}
+                </p>
+              </div>
+            </div>
+
+            {spotlightKpi && (
+              <div className="card-surface flex flex-col justify-between rounded-3xl border border-ink/10 p-6 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-ink-soft/60">{spotlightKpi.name}</p>
+                    <p className="mt-1 text-2xl font-bold text-ink">
+                      {spotlightKpi.dataAvailable === false ? "No data" : formatValue(spotlightKpi)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <MiniBarTrend data={spotlightKpi.history.length > 0 ? spotlightKpi.history : [{ period: "—", value: 0 }]} />
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-3xl bg-ink p-6 text-white shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Risk Pulse</p>
+                <span className="text-xs text-white/50">{risks.length} active</span>
+              </div>
+              <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-white/10">
+                <div className="bg-rose-400" style={{ width: `${total ? (criticalRisks.length / total) * 100 : 0}%` }} />
+                <div className="bg-butter" style={{ width: `${total ? (emergingRisks.length / total) * 100 : 0}%` }} />
+                <div className="bg-emerald-400" style={{ width: `${total ? (counts.green / total) * 100 : 0}%` }} />
+              </div>
+              <div className="mt-4 flex justify-between text-xs text-white/60">
+                <span>{criticalRisks.length} Critical</span>
+                <span>{emergingRisks.length} Emerging</span>
+                <span>{counts.green} Stable</span>
+              </div>
+            </div>
+
+            <div className="card-surface flex flex-col justify-between rounded-3xl border border-ink/10 p-6 shadow-sm">
+              <p className="text-sm font-medium text-ink-soft/60">Corrective Actions</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-ink">{completedActions}</span>
+                <span className="text-xs text-ink-soft/50">/ {deptActions.length || 0} completed</span>
+              </div>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-ink/10">
+                <div
+                  className="h-full bg-butter"
+                  style={{ width: `${deptActions.length ? (completedActions / deptActions.length) * 100 : 0}%` }}
+                />
+              </div>
+              <Link to="/actions" className="mt-3 text-xs font-semibold text-ink-soft/50 hover:text-ink">
+                Open Corrective Actions →
+              </Link>
+            </div>
+          </div>
+        </>
       )}
 
       <section>
@@ -136,6 +246,15 @@ export function DepartmentDashboard({
       </section>
 
       <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
+    </div>
+  );
+}
+
+function BigStat({ value, label }: { value: number | string; label: string }) {
+  return (
+    <div className="text-right">
+      <div className="text-3xl font-bold text-ink">{value}</div>
+      <div className="text-xs text-ink-soft/50">{label}</div>
     </div>
   );
 }
