@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import buhleWordmark from "../assets/buhle-wordmark.png";
 import { BUILD_VERSION } from "../data/version";
+import { BuiltByBadge } from "../components/common/BuiltByBadge";
 
 const roleLabels: Record<string, string> = {
   executive: "Executive Management",
@@ -113,6 +114,7 @@ export function Login() {
 
         <p className="mt-5 text-center text-[11px] text-ink-soft/30">Build v{BUILD_VERSION}</p>
       </div>
+      <BuiltByBadge />
     </div>
   );
 }
