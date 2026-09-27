@@ -22,6 +22,16 @@ interface DataStoreValue {
   submitCycle: (cycleId: string, submittedBy: string, nextDueDateOverride?: string) => void;
   /** Section 51: an authorised user manually overrides a calculated due date. */
   overrideCycleDueDate: (cycleId: string, newDueDate: string) => void;
+  /**
+   * Section 60 (Early Warning Configuration): admin edits a KPI's own
+   * target/threshold — this is the one place "the trigger and limits" are
+   * actually set. Marks the KPI's thresholdApproval as "confirmed" since an
+   * administrator just explicitly set the value.
+   */
+  updateKpiThresholds: (
+    kpiId: string,
+    updates: Partial<Pick<Kpi, "target" | "greenThreshold" | "amberThreshold">>
+  ) => void;
 }
 
 const DataStoreContext = createContext<DataStoreValue | undefined>(undefined);
@@ -98,6 +108,11 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       overrideCycleDueDate: (cycleId, newDueDate) => {
         setCycles((prev) =>
           prev.map((c) => (c.cycleId === cycleId ? { ...c, dueDate: newDueDate, nextDateOverridden: true } : c))
+        );
+      },
+      updateKpiThresholds: (kpiId, updates) => {
+        setKpis((prev) =>
+          prev.map((k) => (k.id === kpiId ? { ...k, ...updates, thresholdApproval: "confirmed" } : k))
         );
       },
     }),

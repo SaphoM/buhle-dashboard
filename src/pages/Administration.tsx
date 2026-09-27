@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { DEMO_KPIS, DEMO_USERS } from "../data/demoData";
+import { DEMO_USERS } from "../data/demoData";
+import { useDataStore } from "../data/DataStoreContext";
 import {
   COST_CENTRES,
   DEPARTMENTS,
@@ -47,10 +47,10 @@ function MasterDataList({ title, items }: { title: string; items: MasterRecord[]
 }
 
 export function Administration() {
-  const [kpis, setKpis] = useState(DEMO_KPIS);
+  const { kpis, updateKpiThresholds } = useDataStore();
 
   function updateThreshold(id: string, field: "greenThreshold" | "amberThreshold" | "target", value: number) {
-    setKpis((prev) => prev.map((k) => (k.id === id ? { ...k, [field]: value } : k)));
+    updateKpiThresholds(id, { [field]: value });
   }
 
   return (
