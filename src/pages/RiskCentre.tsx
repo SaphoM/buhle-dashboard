@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { DEMO_RISKS } from "../data/demoData";
+import { useDataStore } from "../data/DataStoreContext";
 import { StatusBadge } from "../components/kpi/StatusBadge";
 import { SelectChevron } from "../components/common/SelectChevron";
 import type { Department, RiskCategory, RiskLevel } from "../types";
@@ -8,19 +8,20 @@ const LEVELS: RiskLevel[] = ["red", "amber", "green"];
 const levelTitle: Record<RiskLevel, string> = { red: "Critical Risks", amber: "Emerging Risks", green: "Monitoring / Resolved" };
 
 export function RiskCentre() {
+  const { risks: allRisks } = useDataStore();
   const [department, setDepartment] = useState<Department | "all">("all");
   const [category, setCategory] = useState<RiskCategory | "all">("all");
 
   const departments = useMemo(
-    () => Array.from(new Set(DEMO_RISKS.map((r) => r.department))) as Department[],
-    []
+    () => Array.from(new Set(allRisks.map((r) => r.department))) as Department[],
+    [allRisks]
   );
   const categories = useMemo(
-    () => Array.from(new Set(DEMO_RISKS.map((r) => r.category))) as RiskCategory[],
-    []
+    () => Array.from(new Set(allRisks.map((r) => r.category))) as RiskCategory[],
+    [allRisks]
   );
 
-  const filtered = DEMO_RISKS.filter(
+  const filtered = allRisks.filter(
     (r) => (department === "all" || r.department === department) && (category === "all" || r.category === category)
   );
 

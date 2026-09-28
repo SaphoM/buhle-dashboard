@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { TopNav } from "./TopNav";
 import { DemoBanner } from "../common/DemoBanner";
 import { BuiltByBadge } from "../common/BuiltByBadge";
+import { AlertToasts } from "../common/AlertToasts";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <TopNav />
       <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">{children}</main>
       <BuiltByBadge />
+      <AlertToasts />
     </div>
   );
 }

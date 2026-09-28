@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { DEMO_ACTIONS, DEMO_RISKS } from "../data/demoData";
+import { DEMO_ACTIONS } from "../data/demoData";
+import { useDataStore } from "../data/DataStoreContext";
 import type { ActionStatus } from "../types";
 
 const statusStyles: Record<ActionStatus, string> = {
@@ -11,8 +12,9 @@ const statusStyles: Record<ActionStatus, string> = {
 };
 
 export function CorrectiveActions() {
+  const { risks } = useDataStore();
   const [actions, setActions] = useState(DEMO_ACTIONS);
-  const riskMap = new Map(DEMO_RISKS.map((r) => [r.id, r]));
+  const riskMap = new Map(risks.map((r) => [r.id, r]));
 
   function advanceStatus(id: string) {
     setActions((prev) =>

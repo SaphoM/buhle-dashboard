@@ -1,4 +1,5 @@
-import { DEMO_ACTIONS, DEMO_KPIS, DEMO_RISKS } from "../data/demoData";
+import { DEMO_ACTIONS } from "../data/demoData";
+import { useDataStore } from "../data/DataStoreContext";
 import { getStatus } from "../data/kpiEngine";
 
 function toCsv(rows: (string | number)[][]): string {
@@ -34,16 +35,18 @@ const reports = [
 ];
 
 export function Reports() {
+  const { kpis, risks } = useDataStore();
+
   function exportKpis() {
     const rows = [["KPI", "Department", "Current", "Target", "Status"]];
-    DEMO_KPIS.forEach((k) =>
+    kpis.forEach((k) =>
       rows.push([k.name, k.department, String(k.currentValue), String(k.target), getStatus(k)])
     );
     download("buhle-kpi-export.csv", toCsv(rows));
   }
   function exportRisks() {
     const rows = [["Risk", "Category", "Department", "Level", "Owner", "Status"]];
-    DEMO_RISKS.forEach((r) => rows.push([r.name, r.category, r.department, r.level, r.owner, r.status]));
+    risks.forEach((r) => rows.push([r.name, r.category, r.department, r.level, r.owner, r.status]));
     download("buhle-risk-export.csv", toCsv(rows));
   }
   function exportActions() {

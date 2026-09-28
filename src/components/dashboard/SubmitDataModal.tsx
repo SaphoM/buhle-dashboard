@@ -25,7 +25,7 @@ export function SubmitDataModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const { kpis, cycles, submitKpiValue, submitCycle } = useDataStore();
+  const { kpis, cycles, submitKpiValues, submitCycle } = useDataStore();
   const { user } = useAuth();
   const canOverrideDate = user?.role === "admin" || user?.role === "executive";
 
@@ -60,11 +60,11 @@ export function SubmitDataModal({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    Object.entries(values).forEach(([kpiId, raw]) => {
-      if (raw.trim() === "") return;
-      const num = Number(raw);
-      if (!Number.isNaN(num)) submitKpiValue(kpiId, num);
-    });
+    const entries = Object.entries(values)
+      .filter(([, raw]) => raw.trim() !== "")
+      .map(([kpiId, raw]) => ({ kpiId, value: Number(raw) }))
+      .filter(({ value }) => !Number.isNaN(value));
+    if (entries.length > 0) submitKpiValues(entries);
     if (cycleId) submitCycle(cycleId, user?.name ?? "Unknown", nextDateOverride ?? undefined);
     setSubmitted(true);
   }

@@ -1,4 +1,5 @@
-import { DEMO_ACTIONS, DEMO_RISKS } from "../data/demoData";
+import { DEMO_ACTIONS } from "../data/demoData";
+import type { Risk } from "../types";
 import { useDataStore } from "../data/DataStoreContext";
 import type { Department, Kpi } from "../types";
 import { KpiCard } from "../components/kpi/KpiCard";
@@ -39,7 +40,7 @@ function generateDataQualityNotes(kpis: Kpi[]): string[] {
 
 export function ExecutiveOverview() {
   const { user } = useAuth();
-  const { kpis: allKpis, cycles: allCycles } = useDataStore();
+  const { kpis: allKpis, cycles: allCycles, risks: allRisks } = useDataStore();
 
   // Section 57 — one row per department: the soonest-due cycle that isn't
   // closed, so the Executive can see at a glance who has submitted, who's
@@ -66,9 +67,9 @@ export function ExecutiveOverview() {
     ? 0
     : Math.round(((counts.green * 100 + counts.amber * 55 + counts.red * 10) / (reportingTotal * 100)) * 100);
 
-  const criticalRisks = DEMO_RISKS.filter((r) => r.level === "red" && r.status !== "Resolved");
-  const emergingRisks = DEMO_RISKS.filter((r) => r.level === "amber" && r.status !== "Resolved");
-  const resolvedRisks = DEMO_RISKS.filter((r) => r.status === "Resolved").slice(0, 3);
+  const criticalRisks = allRisks.filter((r) => r.level === "red" && r.status !== "Resolved");
+  const emergingRisks = allRisks.filter((r) => r.level === "amber" && r.status !== "Resolved");
+  const resolvedRisks = allRisks.filter((r) => r.status === "Resolved").slice(0, 3);
 
   const today = new Date("2026-09-12");
   const overdue = DEMO_ACTIONS.filter((a) => a.status === "Overdue");
@@ -148,7 +149,7 @@ export function ExecutiveOverview() {
         <div className="rounded-3xl bg-ink p-6 text-white shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">Risk Pulse</p>
-            <span className="text-xs text-white/50">{DEMO_RISKS.filter((r) => r.status !== "Resolved").length} active</span>
+            <span className="text-xs text-white/50">{allRisks.filter((r) => r.status !== "Resolved").length} active</span>
           </div>
           <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-white/10">
             <div className="bg-rose-400" style={{ width: `${(criticalRisks.length / total) * 100}%` }} />
@@ -310,7 +311,7 @@ function BigStat({ value, label }: { value: number | string; label: string }) {
   );
 }
 
-function DarkRiskGroup({ title, items, level }: { title: string; items: typeof DEMO_RISKS; level: "red" | "amber" | "green" }) {
+function DarkRiskGroup({ title, items, level }: { title: string; items: Risk[]; level: "red" | "amber" | "green" }) {
   return (
     <div>
       <p className="mb-1.5 text-xs font-semibold text-white/50">

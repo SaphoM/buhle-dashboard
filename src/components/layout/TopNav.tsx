@@ -1,12 +1,15 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { NAV_ITEMS } from "../../auth/permissions";
+import { useDataStore } from "../../data/DataStoreContext";
 import buhleWordmark from "../../assets/buhle-wordmark.png";
 
 export function TopNav() {
   const { user, logout } = useAuth();
+  const { risks } = useDataStore();
   if (!user) return null;
   const items = NAV_ITEMS.filter((n) => n.roles.includes(user.role));
+  const activeRiskCount = risks.filter((r) => r.status !== "Resolved").length;
 
   return (
     <div className="flex items-center gap-3 px-4 pt-4 sm:px-6">
@@ -32,13 +35,18 @@ export function TopNav() {
       </nav>
 
       <div className="flex shrink-0 items-center gap-2">
-        <button
+        <NavLink
+          to="/risk-centre"
           className="relative flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/80 shadow-sm hover:bg-white"
-          title="Notifications"
+          title={`${activeRiskCount} active risk${activeRiskCount === 1 ? "" : "s"}`}
         >
           🔔
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500" />
-        </button>
+          {activeRiskCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+              {activeRiskCount}
+            </span>
+          )}
+        </NavLink>
         <button
           onClick={logout}
           className="flex h-10 items-center gap-2 rounded-full border border-ink/10 bg-white/80 px-3 shadow-sm hover:bg-white"

@@ -1,8 +1,10 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import type { Kpi, DataCollectionCycle } from "../types";
-import { DEMO_KPIS } from "./demoData";
+import type { Kpi, DataCollectionCycle, Risk } from "../types";
+import { DEMO_KPIS, DEMO_RISKS } from "./demoData";
 import { DEMO_CYCLES } from "./cyclesData";
 import { computeNextDueDate, deriveNextReportingPeriod } from "./cycleEngine";
+import { getStatusForValue } from "./kpiEngine";
+import { reconcileRiskForKpi, type EwsAlert } from "./ewsEngine";
 
 // Lifts the KPI and Cycle demo arrays into React state so a department
 // manager's submission (via the Input Modal — Section 47) actually flows
@@ -12,8 +14,18 @@ import { computeNextDueDate, deriveNextReportingPeriod } from "./cycleEngine";
 interface DataStoreValue {
   kpis: Kpi[];
   cycles: DataCollectionCycle[];
-  /** Records a value for a KPI — clears "no data" and shifts history forward. */
-  submitKpiValue: (kpiId: string, newValue: number) => void;
+  risks: Risk[];
+  alerts: EwsAlert[];
+  /**
+   * Records values for one or more KPIs in a single atomic step — clears
+   * "no data", shifts history forward, then reacts: creates/escalates/
+   * resolves the risk tied to each one, and raises an alert per change.
+   * Takes a batch (not one call per KPI) so a single submission that trips
+   * two thresholds at once evaluates correctly — each call in a loop would
+   * otherwise read the same pre-submission risks snapshot and clobber each
+   * other's new risk records.
+   */
+  submitKpiValues: (entries: { kpiId: string; value: number }[]) => void;
   /**
    * Marks a cycle as submitted, then re-evaluates the cycle engine (Section
    * 62): calculates the next submission date and opens the next cycle
@@ -32,6 +44,7 @@ interface DataStoreValue {
     kpiId: string,
     updates: Partial<Pick<Kpi, "target" | "greenThreshold" | "amberThreshold">>
   ) => void;
+  dismissAlert: (alertId: string) => void;
 }
 
 const DataStoreContext = createContext<DataStoreValue | undefined>(undefined);
@@ -39,30 +52,56 @@ const DataStoreContext = createContext<DataStoreValue | undefined>(undefined);
 export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [kpis, setKpis] = useState<Kpi[]>(DEMO_KPIS);
   const [cycles, setCycles] = useState<DataCollectionCycle[]>(DEMO_CYCLES);
+  const [risks, setRisks] = useState<Risk[]>(DEMO_RISKS);
+  const [alerts, setAlerts] = useState<EwsAlert[]>([]);
 
   const value = useMemo<DataStoreValue>(
     () => ({
       kpis,
       cycles,
-      submitKpiValue: (kpiId, newValue) => {
-        setKpis((prev) =>
-          prev.map((k) => {
-            if (k.id !== kpiId) return k;
-            // The submission modal resubmits every field it shows, including
-            // ones the user never touched — a no-op re-submit must not shift
-            // previousValue/history, or every untouched KPI's trend would
-            // flatten to 0% just because it shared a form with an edited one.
-            const changed = k.dataAvailable === false || newValue !== k.currentValue;
-            if (!changed) return k;
-            return {
-              ...k,
-              previousValue: k.currentValue,
-              currentValue: newValue,
-              dataAvailable: true,
-              history: [...k.history.slice(-5), { period: "Latest", value: newValue }],
-            };
-          })
-        );
+      risks,
+      alerts,
+      submitKpiValues: (entries) => {
+        // Computed synchronously against the current closure snapshot and
+        // committed with plain (non-functional) setState calls — everything
+        // in the batch is derived here, in order, so two KPIs changing at
+        // once both land correctly instead of racing each other.
+        let workingKpis = kpis;
+        let workingRisks = risks;
+        const newAlerts: EwsAlert[] = [];
+
+        for (const { kpiId, value } of entries) {
+          const kpi = workingKpis.find((k) => k.id === kpiId);
+          if (!kpi) continue;
+          // The submission modal resubmits every field it shows, including
+          // ones the user never touched — a no-op re-submit must not shift
+          // previousValue/history, or every untouched KPI's trend would
+          // flatten to 0% just because it shared a form with an edited one.
+          const changed = kpi.dataAvailable === false || value !== kpi.currentValue;
+          if (!changed) continue;
+
+          const updatedKpi: Kpi = {
+            ...kpi,
+            previousValue: kpi.currentValue,
+            currentValue: value,
+            dataAvailable: true,
+            history: [...kpi.history.slice(-5), { period: "Latest", value }],
+          };
+          workingKpis = workingKpis.map((k) => (k.id === kpiId ? updatedKpi : k));
+
+          // Section 62, steps 5-7: react, don't just recolour. Evaluate the
+          // new value against this KPI's own thresholds and create/escalate/
+          // resolve the risk record tied to it — this is what actually shows
+          // up in the Risk Centre and dashboards, not just a badge.
+          const newStatus = getStatusForValue(updatedKpi, value);
+          const { risks: nextRisks, alert } = reconcileRiskForKpi(updatedKpi, newStatus, workingRisks);
+          workingRisks = nextRisks;
+          if (alert) newAlerts.push(alert);
+        }
+
+        setKpis(workingKpis);
+        setRisks(workingRisks);
+        if (newAlerts.length > 0) setAlerts((prev) => [...newAlerts, ...prev].slice(0, 20));
       },
       submitCycle: (cycleId, submittedBy, nextDueDateOverride) => {
         setCycles((prev) => {
@@ -115,8 +154,11 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           prev.map((k) => (k.id === kpiId ? { ...k, ...updates, thresholdApproval: "confirmed" } : k))
         );
       },
+      dismissAlert: (alertId) => {
+        setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+      },
     }),
-    [kpis, cycles]
+    [kpis, cycles, risks, alerts]
   );
 
   return <DataStoreContext.Provider value={value}>{children}</DataStoreContext.Provider>;
