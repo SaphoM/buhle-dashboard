@@ -5,7 +5,7 @@ import { useDataStore } from "../../data/DataStoreContext";
 // alerts where necessary"). A risk being created/escalated/resolved by the
 // EWS engine is silent unless something actually surfaces it — this renders
 // each new alert as a dismissible toast, auto-clearing after a few seconds,
-// stacked bottom-left (the "Built by X Spark" badge already owns bottom-right).
+// stacked top-right.
 
 const levelStyles: Record<string, string> = {
   red: "bg-ink text-butter border-ink",
@@ -56,7 +56,7 @@ export function AlertToasts() {
   if (shown.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 z-40 flex flex-col gap-2">
+    <div className="fixed top-4 right-4 z-40 flex flex-col gap-2">
       {shown.map((a) => (
         <div
           key={a.id}
