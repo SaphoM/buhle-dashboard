@@ -11,6 +11,14 @@ import {
   type MasterRecord,
 } from "../data/masterData";
 import type { Department } from "../types";
+import { Tooltip } from "../components/common/Tooltip";
+
+const APPROVAL_NOTE: Record<"confirmed" | "proposed", string> = {
+  confirmed:
+    "Confirmed — this target/threshold comes from a real Buhle document supplied during discovery (e.g. the HR KPI Calc workbook's own 2026 goals).",
+  proposed:
+    "Proposed — a starting point from the discovery brief, not yet Board-approved (see Section 19 of the brief).",
+};
 
 // Same short labels the top nav already uses per department (permissions.ts
 // NAV_ITEMS) — reused here rather than inventing new department wording.
@@ -142,11 +150,17 @@ export function Administration() {
             <tbody>
               {filteredKpis.map((k) => (
                 <tr key={k.id} className="border-b border-ink/5 last:border-0">
-                  <td className="px-4 py-2 font-medium text-ink">{k.name}</td>
+                  <td className="px-4 py-2 font-medium text-ink">
+                    <Tooltip text={k.insight}>{k.name}</Tooltip>
+                  </td>
                   <td className="px-4 py-2 text-ink-soft/70">{k.owner}</td>
                   <td className="px-4 py-2 text-xs text-ink-soft/50">{k.sourceSystem ?? "TO CONFIRM"}</td>
                   <td className="px-4 py-2">
-                    <EvidenceBadge status={k.thresholdApproval === "confirmed" ? "confirmed" : "proposed"} />
+                    <Tooltip
+                      text={APPROVAL_NOTE[k.thresholdApproval === "confirmed" ? "confirmed" : "proposed"]}
+                    >
+                      <EvidenceBadge status={k.thresholdApproval === "confirmed" ? "confirmed" : "proposed"} />
+                    </Tooltip>
                   </td>
                   <td className="px-4 py-2">
                     <input
