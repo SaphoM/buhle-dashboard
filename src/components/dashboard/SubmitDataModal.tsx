@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import type { Department } from "../../types";
 import { Modal } from "../common/Modal";
 import { SelectChevron } from "../common/SelectChevron";
@@ -41,6 +41,14 @@ export function SubmitDataModal({
     Object.fromEntries(deptKpis.map((k) => [k.id, k.dataAvailable === false ? "" : String(k.currentValue)]))
   );
   const [submitted, setSubmitted] = useState(false);
+  // Staged here on Submit, but not written to the store (and so no EWS
+  // alert/toast is raised) until the user acknowledges the confirmation
+  // screen by closing it — the toast is meant to fire on Done, not on Submit.
+  const pendingSubmission = useRef<{
+    entries: { kpiId: string; value: number }[];
+    cycleId: string;
+    nextDate?: string;
+  } | null>(null);
 
   const calculatedNextDate = useMemo(
     () => (selectedCycle ? computeNextDueDate(selectedCycle) : ""),
@@ -64,12 +72,17 @@ export function SubmitDataModal({
       .filter(([, raw]) => raw.trim() !== "")
       .map(([kpiId, raw]) => ({ kpiId, value: Number(raw) }))
       .filter(({ value }) => !Number.isNaN(value));
-    if (entries.length > 0) submitKpiValues(entries);
-    if (cycleId) submitCycle(cycleId, user?.name ?? "Unknown", nextDateOverride ?? undefined);
+    pendingSubmission.current = { entries, cycleId, nextDate: nextDateOverride ?? undefined };
     setSubmitted(true);
   }
 
   function handleClose() {
+    const pending = pendingSubmission.current;
+    if (pending) {
+      if (pending.entries.length > 0) submitKpiValues(pending.entries);
+      if (pending.cycleId) submitCycle(pending.cycleId, user?.name ?? "Unknown", pending.nextDate);
+      pendingSubmission.current = null;
+    }
     setSubmitted(false);
     setNextDateOverride(null);
     onClose();
