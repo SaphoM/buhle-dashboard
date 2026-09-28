@@ -40,6 +40,38 @@ export function TopNav() {
     scrollerRef.current?.scrollBy({ left: amount, behavior: "smooth" });
   }
 
+  // Hovering near either edge auto-scrolls continuously toward it, rather
+  // than requiring repeated clicks on the arrow — the cursor "heading
+  // towards the end" is enough to keep the tabs moving until it leaves.
+  const autoScrollDirRef = useRef<number | null>(null);
+  const autoScrollFrameRef = useRef<number | null>(null);
+
+  function startAutoScroll(direction: number) {
+    autoScrollDirRef.current = direction;
+    if (autoScrollFrameRef.current != null) return;
+    const step = () => {
+      const el = scrollerRef.current;
+      if (!el || autoScrollDirRef.current == null) {
+        autoScrollFrameRef.current = null;
+        return;
+      }
+      el.scrollLeft += autoScrollDirRef.current * 8;
+      updateScrollState();
+      autoScrollFrameRef.current = requestAnimationFrame(step);
+    };
+    autoScrollFrameRef.current = requestAnimationFrame(step);
+  }
+
+  function stopAutoScroll() {
+    autoScrollDirRef.current = null;
+    if (autoScrollFrameRef.current != null) {
+      cancelAnimationFrame(autoScrollFrameRef.current);
+      autoScrollFrameRef.current = null;
+    }
+  }
+
+  useEffect(() => stopAutoScroll, []);
+
   if (!user) return null;
   const items = NAV_ITEMS.filter((n) => n.roles.includes(user.role));
   const activeRiskCount = risks.filter((r) => r.status !== "Resolved").length;
@@ -73,30 +105,36 @@ export function TopNav() {
         </nav>
 
         {canScrollLeft && (
-          <>
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-full bg-gradient-to-r from-white to-transparent" />
+          <div
+            onMouseEnter={() => startAutoScroll(-1)}
+            onMouseLeave={stopAutoScroll}
+            className="absolute inset-y-0 left-0 w-8 rounded-l-full bg-gradient-to-r from-white to-transparent"
+          >
             <button
               type="button"
               onClick={() => scrollByAmount(-160)}
               aria-label="Scroll tabs left"
-              className="absolute inset-y-0 left-0 flex w-7 items-center justify-center text-ink-soft/60 hover:text-ink"
+              className="flex h-full w-full items-center justify-center text-ink-soft/60 hover:text-ink"
             >
               ‹
             </button>
-          </>
+          </div>
         )}
         {canScrollRight && (
-          <>
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-full bg-gradient-to-l from-white to-transparent" />
+          <div
+            onMouseEnter={() => startAutoScroll(1)}
+            onMouseLeave={stopAutoScroll}
+            className="absolute inset-y-0 right-0 w-8 rounded-r-full bg-gradient-to-l from-white to-transparent"
+          >
             <button
               type="button"
               onClick={() => scrollByAmount(160)}
               aria-label="Scroll tabs right"
-              className="absolute inset-y-0 right-0 flex w-7 items-center justify-center text-ink-soft/60 hover:text-ink"
+              className="flex h-full w-full items-center justify-center text-ink-soft/60 hover:text-ink"
             >
               ›
             </button>
-          </>
+          </div>
         )}
       </div>
 
