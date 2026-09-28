@@ -1,4 +1,4 @@
-import type { Department, Kpi, RagStatus, Risk, RiskCategory } from "../types";
+import type { CorrectiveAction, Department, Kpi, RagStatus, Risk, RiskCategory } from "../types";
 
 /**
  * EWS reaction engine (Section 62, steps 5-7 — "Create/update risks if
@@ -44,7 +44,7 @@ export function reconcileRiskForKpi(
   kpi: Kpi,
   newStatus: RagStatus,
   prevRisks: Risk[]
-): { risks: Risk[]; alert: EwsAlert | null } {
+): { risks: Risk[]; alert: EwsAlert | null; createdRisk?: Risk } {
   const today = new Date().toISOString().slice(0, 10);
   // Match on kpiId, not a fixed id — several demo risks were hand-authored
   // (risk-5, risk-6, ...) before this engine existed. Matching only the
@@ -121,6 +121,7 @@ export function reconcileRiskForKpi(
   };
   return {
     risks: [...prevRisks, created],
+    createdRisk: created,
     alert: {
       id: `alert-${id}-${Date.now()}`,
       kind: "created",
@@ -128,5 +129,26 @@ export function reconcileRiskForKpi(
       message: `${newStatus === "red" ? "New Critical risk" : "New Emerging risk"}: "${kpi.name}" — ${kpi.department}.`,
       timestamp: today,
     },
+  };
+}
+
+/**
+ * Section 22/62: when a risk is newly raised, don't just leave it sitting
+ * there — stage a corrective action automatically so there's always
+ * something owned and due, not just a coloured record. Due date follows the
+ * same escalation urgency as the risk itself: Red gets 5 working days
+ * (~7 calendar days), Amber gets 14.
+ */
+export function createActionForRisk(risk: Risk): CorrectiveAction {
+  const due = new Date(risk.dateDetected);
+  due.setDate(due.getDate() + (risk.level === "red" ? 7 : 14));
+  return {
+    id: `act-auto-${risk.id}`,
+    riskId: risk.id,
+    description: risk.recommendedAction,
+    owner: risk.owner,
+    dueDate: due.toISOString().slice(0, 10),
+    status: "Open",
+    createdDate: risk.dateDetected,
   };
 }

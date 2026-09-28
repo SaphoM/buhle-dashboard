@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { Department } from "../../types";
-import { DEMO_ACTIONS } from "../../data/demoData";
 import { useDataStore } from "../../data/DataStoreContext";
 import { daysUntilDue, getEffectiveStatus, getSubmissionEwsStatus } from "../../data/cycleEngine";
 import { KpiCard } from "../kpi/KpiCard";
@@ -19,14 +18,14 @@ export function DepartmentDashboard({
   department: Department;
   description: string;
 }) {
-  const { kpis: allKpis, cycles: allCycles, risks: allRisks } = useDataStore();
+  const { kpis: allKpis, cycles: allCycles, risks: allRisks, actions: allActions } = useDataStore();
   const [modalOpen, setModalOpen] = useState(false);
   const kpis = allKpis.filter((k) => k.department === department);
   const allDeptRisks = allRisks.filter((r) => r.department === department);
   const risks = allDeptRisks.filter((r) => r.status !== "Resolved");
-  const actionMap = new Map(DEMO_ACTIONS.map((a) => [a.riskId, a]));
+  const actionMap = new Map(allActions.map((a) => [a.riskId, a]));
   const riskIds = new Set(allDeptRisks.map((r) => r.id));
-  const deptActions = DEMO_ACTIONS.filter((a) => riskIds.has(a.riskId));
+  const deptActions = allActions.filter((a) => riskIds.has(a.riskId));
 
   // Section 47: proactively tell the manager what's due next, rather than
   // relying on them to remember. Overdue first, then the soonest due date.

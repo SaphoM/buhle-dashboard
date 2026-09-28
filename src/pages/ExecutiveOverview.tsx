@@ -1,4 +1,3 @@
-import { DEMO_ACTIONS } from "../data/demoData";
 import type { Risk } from "../types";
 import { useDataStore } from "../data/DataStoreContext";
 import type { Department, Kpi } from "../types";
@@ -40,7 +39,7 @@ function generateDataQualityNotes(kpis: Kpi[]): string[] {
 
 export function ExecutiveOverview() {
   const { user } = useAuth();
-  const { kpis: allKpis, cycles: allCycles, risks: allRisks } = useDataStore();
+  const { kpis: allKpis, cycles: allCycles, risks: allRisks, actions: allActions } = useDataStore();
 
   // Section 57 — one row per department: the soonest-due cycle that isn't
   // closed, so the Executive can see at a glance who has submitted, who's
@@ -72,13 +71,13 @@ export function ExecutiveOverview() {
   const resolvedRisks = allRisks.filter((r) => r.status === "Resolved").slice(0, 3);
 
   const today = new Date("2026-09-12");
-  const overdue = DEMO_ACTIONS.filter((a) => a.status === "Overdue");
-  const upcoming = DEMO_ACTIONS.filter((a) => {
+  const overdue = allActions.filter((a) => a.status === "Overdue");
+  const upcoming = allActions.filter((a) => {
     const due = new Date(a.dueDate);
     const days = (due.getTime() - today.getTime()) / 86400000;
     return a.status !== "Completed" && a.status !== "Overdue" && days >= 0 && days <= 14;
   });
-  const completedCount = DEMO_ACTIONS.filter((a) => a.status === "Completed").length;
+  const completedCount = allActions.filter((a) => a.status === "Completed").length;
 
   const insights = generateExecutiveInsight(allKpis);
   const dataQualityNotes = generateDataQualityNotes(allKpis);
@@ -167,10 +166,10 @@ export function ExecutiveOverview() {
           <p className="text-sm font-medium text-ink-soft/60">Corrective Actions</p>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-ink">{completedCount}</span>
-            <span className="text-xs text-ink-soft/50">/ {DEMO_ACTIONS.length} completed</span>
+            <span className="text-xs text-ink-soft/50">/ {allActions.length} completed</span>
           </div>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-ink/10">
-            <div className="h-full bg-butter" style={{ width: `${(completedCount / DEMO_ACTIONS.length) * 100}%` }} />
+            <div className="h-full bg-butter" style={{ width: `${(completedCount / allActions.length) * 100}%` }} />
           </div>
           <Link to="/actions" className="mt-3 text-xs font-semibold text-ink-soft/50 hover:text-ink">
             Open Corrective Actions →

@@ -1,4 +1,3 @@
-import { DEMO_ACTIONS } from "../data/demoData";
 import { useDataStore } from "../data/DataStoreContext";
 import { getStatus } from "../data/kpiEngine";
 
@@ -35,7 +34,7 @@ const reports = [
 ];
 
 export function Reports() {
-  const { kpis, risks } = useDataStore();
+  const { kpis, risks, actions } = useDataStore();
 
   function exportKpis() {
     const rows = [["KPI", "Department", "Current", "Target", "Status"]];
@@ -51,7 +50,7 @@ export function Reports() {
   }
   function exportActions() {
     const rows = [["Action", "Owner", "Due Date", "Status"]];
-    DEMO_ACTIONS.forEach((a) => rows.push([a.description, a.owner, a.dueDate, a.status]));
+    actions.forEach((a) => rows.push([a.description, a.owner, a.dueDate, a.status]));
     download("buhle-actions-export.csv", toCsv(rows));
   }
 

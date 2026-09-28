@@ -1,10 +1,10 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import type { Kpi, DataCollectionCycle, Risk } from "../types";
-import { DEMO_KPIS, DEMO_RISKS } from "./demoData";
+import type { Kpi, DataCollectionCycle, Risk, CorrectiveAction, ActionStatus } from "../types";
+import { DEMO_KPIS, DEMO_RISKS, DEMO_ACTIONS } from "./demoData";
 import { DEMO_CYCLES } from "./cyclesData";
 import { computeNextDueDate, deriveNextReportingPeriod } from "./cycleEngine";
 import { getStatusForValue } from "./kpiEngine";
-import { reconcileRiskForKpi, type EwsAlert } from "./ewsEngine";
+import { reconcileRiskForKpi, createActionForRisk, type EwsAlert } from "./ewsEngine";
 
 // Lifts the KPI and Cycle demo arrays into React state so a department
 // manager's submission (via the Input Modal — Section 47) actually flows
@@ -15,6 +15,7 @@ interface DataStoreValue {
   kpis: Kpi[];
   cycles: DataCollectionCycle[];
   risks: Risk[];
+  actions: CorrectiveAction[];
   alerts: EwsAlert[];
   /**
    * Records values for one or more KPIs in a single atomic step — clears
@@ -45,6 +46,9 @@ interface DataStoreValue {
     updates: Partial<Pick<Kpi, "target" | "greenThreshold" | "amberThreshold">>
   ) => void;
   dismissAlert: (alertId: string) => void;
+  /** Advances an action Open -> In Progress -> Completed (used by the
+   *  Corrective Actions page's "Advance" control). */
+  advanceActionStatus: (actionId: string) => void;
 }
 
 const DataStoreContext = createContext<DataStoreValue | undefined>(undefined);
@@ -53,6 +57,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [kpis, setKpis] = useState<Kpi[]>(DEMO_KPIS);
   const [cycles, setCycles] = useState<DataCollectionCycle[]>(DEMO_CYCLES);
   const [risks, setRisks] = useState<Risk[]>(DEMO_RISKS);
+  const [actions, setActions] = useState<CorrectiveAction[]>(DEMO_ACTIONS);
   const [alerts, setAlerts] = useState<EwsAlert[]>([]);
 
   const value = useMemo<DataStoreValue>(
@@ -60,6 +65,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       kpis,
       cycles,
       risks,
+      actions,
       alerts,
       submitKpiValues: (entries) => {
         // Computed synchronously against the current closure snapshot and
@@ -68,6 +74,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
         // once both land correctly instead of racing each other.
         let workingKpis = kpis;
         let workingRisks = risks;
+        let workingActions = actions;
         const newAlerts: EwsAlert[] = [];
 
         for (const { kpiId, value } of entries) {
@@ -94,13 +101,28 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           // resolve the risk record tied to it — this is what actually shows
           // up in the Risk Centre and dashboards, not just a badge.
           const newStatus = getStatusForValue(updatedKpi, value);
-          const { risks: nextRisks, alert } = reconcileRiskForKpi(updatedKpi, newStatus, workingRisks);
+          const { risks: nextRisks, alert, createdRisk } = reconcileRiskForKpi(updatedKpi, newStatus, workingRisks);
           workingRisks = nextRisks;
           if (alert) newAlerts.push(alert);
+
+          // Section 22/62: a newly-raised risk doesn't just sit there — stage
+          // a corrective action for it automatically, owned and due.
+          if (createdRisk) {
+            const action = createActionForRisk(createdRisk);
+            workingActions = [...workingActions, action];
+            newAlerts.push({
+              id: `alert-${action.id}-${Date.now()}`,
+              kind: "created",
+              level: createdRisk.level,
+              message: `Action created: "${action.description}" — ${action.owner}, due ${new Date(action.dueDate).toLocaleDateString("en-ZA")}.`,
+              timestamp: action.createdDate,
+            });
+          }
         }
 
         setKpis(workingKpis);
         setRisks(workingRisks);
+        setActions(workingActions);
         if (newAlerts.length > 0) setAlerts((prev) => [...newAlerts, ...prev].slice(0, 20));
       },
       submitCycle: (cycleId, submittedBy, nextDueDateOverride) => {
@@ -157,8 +179,19 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       dismissAlert: (alertId) => {
         setAlerts((prev) => prev.filter((a) => a.id !== alertId));
       },
+      advanceActionStatus: (actionId) => {
+        setActions((prev) =>
+          prev.map((a) => {
+            if (a.id !== actionId) return a;
+            const order: ActionStatus[] = ["Open", "In Progress", "Completed"];
+            const idx = order.indexOf(a.status);
+            if (idx === -1 || idx === order.length - 1) return a;
+            return { ...a, status: order[idx + 1] };
+          })
+        );
+      },
     }),
-    [kpis, cycles, risks, alerts]
+    [kpis, cycles, risks, actions, alerts]
   );
 
   return <DataStoreContext.Provider value={value}>{children}</DataStoreContext.Provider>;

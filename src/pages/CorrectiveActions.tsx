@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { DEMO_ACTIONS } from "../data/demoData";
 import { useDataStore } from "../data/DataStoreContext";
 import type { ActionStatus } from "../types";
 
@@ -12,27 +10,17 @@ const statusStyles: Record<ActionStatus, string> = {
 };
 
 export function CorrectiveActions() {
-  const { risks } = useDataStore();
-  const [actions, setActions] = useState(DEMO_ACTIONS);
+  const { risks, actions, advanceActionStatus } = useDataStore();
   const riskMap = new Map(risks.map((r) => [r.id, r]));
-
-  function advanceStatus(id: string) {
-    setActions((prev) =>
-      prev.map((a) => {
-        if (a.id !== id) return a;
-        const order: ActionStatus[] = ["Open", "In Progress", "Completed"];
-        const idx = order.indexOf(a.status);
-        if (idx === -1 || idx === order.length - 1) return a;
-        return { ...a, status: order[idx + 1] };
-      })
-    );
-  }
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-ink">Corrective Actions</h1>
-        <p className="text-sm text-ink-soft/60">Actions raised against Amber/Red risks, tracked to resolution.</p>
+        <p className="text-sm text-ink-soft/60">
+          Actions raised against Amber/Red risks, tracked to resolution — including ones the Early Warning System
+          staged automatically when a new risk appeared.
+        </p>
       </div>
 
       <div className="card-surface overflow-hidden rounded-3xl border border-ink/10 shadow-sm">
@@ -52,7 +40,14 @@ export function CorrectiveActions() {
               const risk = riskMap.get(a.riskId);
               return (
                 <tr key={a.id} className="border-b border-ink/5 last:border-0 align-top">
-                  <td className="px-4 py-3 text-ink-soft/80">{risk?.name ?? "—"}</td>
+                  <td className="px-4 py-3 text-ink-soft/80">
+                    {risk?.name ?? "—"}
+                    {a.id.startsWith("act-auto-") && (
+                      <span className="ml-1.5 rounded-full bg-butter/40 px-2 py-0.5 text-[10px] font-semibold text-ink">
+                        Auto-created
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-ink-soft/80">{a.description}</td>
                   <td className="px-4 py-3 text-ink-soft/60">{a.owner}</td>
                   <td className="px-4 py-3 text-ink-soft/60">{new Date(a.dueDate).toLocaleDateString("en-ZA")}</td>
@@ -64,7 +59,7 @@ export function CorrectiveActions() {
                   <td className="px-4 py-3">
                     {a.status !== "Completed" && a.status !== "Cancelled" && (
                       <button
-                        onClick={() => advanceStatus(a.id)}
+                        onClick={() => advanceActionStatus(a.id)}
                         className="text-xs font-semibold text-ink hover:underline"
                       >
                         Advance →
