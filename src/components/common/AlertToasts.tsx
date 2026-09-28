@@ -47,7 +47,7 @@ export function AlertToasts() {
           next.delete(a.id);
           return next;
         });
-      }, 8000)
+      }, 15000)
     );
     return () => timers.forEach(clearTimeout);
   }, [alerts]);
