@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DEMO_USERS } from "../data/demoData";
 import { useDataStore } from "../data/DataStoreContext";
 import {
@@ -9,6 +10,19 @@ import {
   type EvidenceStatus,
   type MasterRecord,
 } from "../data/masterData";
+import type { Department } from "../types";
+
+// Same short labels the top nav already uses per department (permissions.ts
+// NAV_ITEMS) — reused here rather than inventing new department wording.
+const KPI_DEPARTMENT_TABS: { label: string; department: Department | "all" }[] = [
+  { label: "All", department: "all" },
+  { label: "Finance", department: "Finance" },
+  { label: "Operations", department: "Operations" },
+  { label: "Farming", department: "Commercial Farming" },
+  { label: "HR", department: "Human Resources" },
+  { label: "Marketing", department: "Marketing" },
+  { label: "Alumni", department: "Alumni" },
+];
 
 const evidenceStyles: Record<EvidenceStatus, string> = {
   confirmed: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -48,10 +62,13 @@ function MasterDataList({ title, items }: { title: string; items: MasterRecord[]
 
 export function Administration() {
   const { kpis, updateKpiThresholds } = useDataStore();
+  const [kpiDeptFilter, setKpiDeptFilter] = useState<Department | "all">("all");
 
   function updateThreshold(id: string, field: "greenThreshold" | "amberThreshold" | "target", value: number) {
     updateKpiThresholds(id, { [field]: value });
   }
+
+  const filteredKpis = kpiDeptFilter === "all" ? kpis : kpis.filter((k) => k.department === kpiDeptFilter);
 
   return (
     <div className="flex flex-col gap-8">
@@ -77,7 +94,29 @@ export function Administration() {
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">KPI Thresholds</h2>
+
+        <div className="mb-3 flex flex-wrap items-center gap-1 overflow-x-auto rounded-full border border-ink/10 bg-white/80 p-1.5 shadow-sm">
+          {KPI_DEPARTMENT_TABS.map((tab) => (
+            <button
+              key={tab.label}
+              type="button"
+              onClick={() => setKpiDeptFilter(tab.department)}
+              aria-pressed={kpiDeptFilter === tab.department}
+              className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                kpiDeptFilter === tab.department
+                  ? "bg-ink text-white shadow-sm"
+                  : "text-ink-soft/70 hover:bg-ink/5 hover:text-ink"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <div className="card-surface overflow-x-auto rounded-3xl border border-ink/10 shadow-sm">
+          {filteredKpis.length === 0 ? (
+            <p className="p-4 text-sm text-ink-soft/40">No KPI thresholds configured for this department.</p>
+          ) : (
           <table className="w-full text-left text-sm">
             <thead className="border-b border-ink/10 bg-ink/[0.03] text-xs uppercase text-ink-soft/40">
               <tr>
@@ -91,7 +130,7 @@ export function Administration() {
               </tr>
             </thead>
             <tbody>
-              {kpis.map((k) => (
+              {filteredKpis.map((k) => (
                 <tr key={k.id} className="border-b border-ink/5 last:border-0">
                   <td className="px-4 py-2 font-medium text-ink">{k.name}</td>
                   <td className="px-4 py-2 text-ink-soft/70">{k.owner}</td>
@@ -127,6 +166,7 @@ export function Administration() {
               ))}
             </tbody>
           </table>
+          )}
         </div>
         <p className="mt-2 text-xs text-ink-soft/40">
           "Confirmed" means the target/threshold comes from a real Buhle document supplied during discovery (e.g.
