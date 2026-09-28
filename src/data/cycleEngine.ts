@@ -27,7 +27,7 @@ export const DEFAULT_DUE_SOON_DAYS = 7;
 const CLOSED_OR_IN_FLIGHT: CycleStatus[] = [...CLOSED_STATUSES, ...IN_FLIGHT_STATUSES];
 
 /**
- * Section 55A — Data Submission Early Warning. Deliberately separate from
+ * Section 55A - Data Submission Early Warning. Deliberately separate from
  * KPI/business-performance status (RagStatus): this answers "did the
  * department send us the data", not "is the number they sent good or bad".
  * Upcoming -> Due Soon -> Due -> Overdue, collapsed to green/amber/red so it
@@ -45,7 +45,7 @@ export function getSubmissionEwsStatus(cycle: DataCollectionCycle, now: Date = n
 // (Section 51: "calculate the next expected date automatically"). The
 // per-learner/per-event frequencies don't have a fixed calendar length, so
 // for those we fall back to repeating the same interval as the cycle just
-// submitted — an honest approximation, not a real calendar rule.
+// submitted - an honest approximation, not a real calendar rule.
 const FREQUENCY_DAYS: Partial<Record<ReportingFrequency, number>> = {
   Daily: 1,
   Weekly: 7,
@@ -69,7 +69,7 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-/** Best-effort label for the next reporting period — not a real calendar engine. */
+/** Best-effort label for the next reporting period - not a real calendar engine. */
 export function deriveNextReportingPeriod(cycle: DataCollectionCycle, nextDueIso: string): string {
   const nextDue = new Date(nextDueIso);
   switch (cycle.frequency) {
@@ -97,9 +97,9 @@ export function deriveNextReportingPeriod(cycle: DataCollectionCycle, nextDueIso
 
 export const cycleStatusMeaning: Record<CycleStatus, string> = {
   Upcoming: "Not yet open for entry.",
-  Open: "Open for entry — not yet started.",
+  Open: "Open for entry - not yet started.",
   "In Progress": "Entry has started but is not yet complete.",
-  Submitted: "Submitted — awaiting review.",
+  Submitted: "Submitted - awaiting review.",
   "Validation Required": "Submitted but flagged for review before acceptance.",
   Accepted: "Reviewed and accepted into the central data model.",
   Returned: "Sent back to the department for correction.",

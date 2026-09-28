@@ -14,7 +14,7 @@ export function TopNav() {
 
   // Roles with many nav items (e.g. admin sees all 12) overflow this pill
   // bar. It's still horizontally scrollable, but with no affordance a user
-  // has no way to know tabs beyond the visible ones exist — these fades +
+  // has no way to know tabs beyond the visible ones exist - these fades +
   // arrow buttons make the overflow discoverable instead of silently hidden.
   function updateScrollState() {
     const el = scrollerRef.current;
@@ -41,7 +41,7 @@ export function TopNav() {
   }
 
   // Hovering near either edge auto-scrolls continuously toward it, rather
-  // than requiring repeated clicks on the arrow — the cursor "heading
+  // than requiring repeated clicks on the arrow - the cursor "heading
   // towards the end" is enough to keep the tabs moving until it leaves.
   const autoScrollDirRef = useRef<number | null>(null);
   const autoScrollFrameRef = useRef<number | null>(null);

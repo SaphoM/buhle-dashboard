@@ -18,7 +18,7 @@ export function CorrectiveActions() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-ink">Corrective Actions</h1>
         <p className="text-sm text-ink-soft/60">
-          Actions raised against Amber/Red risks, tracked to resolution — including ones the Early Warning System
+          Actions raised against Amber/Red risks, tracked to resolution - including ones the Early Warning System
           staged automatically when a new risk appeared.
         </p>
       </div>
@@ -41,7 +41,7 @@ export function CorrectiveActions() {
               return (
                 <tr key={a.id} className="border-b border-ink/5 last:border-0 align-top">
                   <td className="px-4 py-3 text-ink-soft/80">
-                    {risk?.name ?? "—"}
+                    {risk?.name ?? "-"}
                     {a.id.startsWith("act-auto-") && (
                       <span className="ml-1.5 rounded-full bg-butter/40 px-2 py-0.5 text-[10px] font-semibold text-ink">
                         Auto-created

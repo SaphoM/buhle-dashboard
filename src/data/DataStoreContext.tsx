@@ -7,9 +7,9 @@ import { getStatusForValue } from "./kpiEngine";
 import { reconcileRiskForKpi, createActionForRisk, type EwsAlert } from "./ewsEngine";
 
 // Lifts the KPI and Cycle demo arrays into React state so a department
-// manager's submission (via the Input Modal — Section 47) actually flows
+// manager's submission (via the Input Modal - Section 47) actually flows
 // through: SUBMISSION -> KPI CALCULATION -> dashboards/EWS re-render.
-// In-memory only, same as the rest of this demo — no backend yet.
+// In-memory only, same as the rest of this demo - no backend yet.
 
 interface DataStoreValue {
   kpis: Kpi[];
@@ -18,11 +18,11 @@ interface DataStoreValue {
   actions: CorrectiveAction[];
   alerts: EwsAlert[];
   /**
-   * Records values for one or more KPIs in a single atomic step — clears
+   * Records values for one or more KPIs in a single atomic step - clears
    * "no data", shifts history forward, then reacts: creates/escalates/
    * resolves the risk tied to each one, and raises an alert per change.
    * Takes a batch (not one call per KPI) so a single submission that trips
-   * two thresholds at once evaluates correctly — each call in a loop would
+   * two thresholds at once evaluates correctly - each call in a loop would
    * otherwise read the same pre-submission risks snapshot and clobber each
    * other's new risk records.
    */
@@ -37,7 +37,7 @@ interface DataStoreValue {
   overrideCycleDueDate: (cycleId: string, newDueDate: string) => void;
   /**
    * Section 60 (Early Warning Configuration): admin edits a KPI's own
-   * target/threshold — this is the one place "the trigger and limits" are
+   * target/threshold - this is the one place "the trigger and limits" are
    * actually set. Marks the KPI's thresholdApproval as "confirmed" since an
    * administrator just explicitly set the value.
    */
@@ -69,7 +69,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       alerts,
       submitKpiValues: (entries) => {
         // Computed synchronously against the current closure snapshot and
-        // committed with plain (non-functional) setState calls — everything
+        // committed with plain (non-functional) setState calls - everything
         // in the batch is derived here, in order, so two KPIs changing at
         // once both land correctly instead of racing each other.
         let workingKpis = kpis;
@@ -81,7 +81,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           const kpi = workingKpis.find((k) => k.id === kpiId);
           if (!kpi) continue;
           // The submission modal resubmits every field it shows, including
-          // ones the user never touched — a no-op re-submit must not shift
+          // ones the user never touched - a no-op re-submit must not shift
           // previousValue/history, or every untouched KPI's trend would
           // flatten to 0% just because it shared a form with an edited one.
           const changed = kpi.dataAvailable === false || value !== kpi.currentValue;
@@ -98,14 +98,14 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
 
           // Section 62, steps 5-7: react, don't just recolour. Evaluate the
           // new value against this KPI's own thresholds and create/escalate/
-          // resolve the risk record tied to it — this is what actually shows
+          // resolve the risk record tied to it - this is what actually shows
           // up in the Risk Centre and dashboards, not just a badge.
           const newStatus = getStatusForValue(updatedKpi, value);
           const { risks: nextRisks, alert, createdRisk } = reconcileRiskForKpi(updatedKpi, newStatus, workingRisks);
           workingRisks = nextRisks;
           if (alert) newAlerts.push(alert);
 
-          // Section 22/62: a newly-raised risk doesn't just sit there — stage
+          // Section 22/62: a newly-raised risk doesn't just sit there - stage
           // a corrective action for it automatically, owned and due.
           if (createdRisk) {
             const action = createActionForRisk(createdRisk);
@@ -114,7 +114,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
               id: `alert-${action.id}-${Date.now()}`,
               kind: "created",
               level: createdRisk.level,
-              message: `Action created: "${action.description}" — ${action.owner}, due ${new Date(action.dueDate).toLocaleDateString("en-ZA")}.`,
+              message: `Action created: "${action.description}" - ${action.owner}, due ${new Date(action.dueDate).toLocaleDateString("en-ZA")}.`,
               timestamp: action.createdDate,
             });
           }
@@ -145,7 +145,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           );
           if (!submitted || alreadySubmitted) return updated;
           // Section 62, steps 10-11: calculate the next submission date and
-          // open the next cycle automatically — the manager should never
+          // open the next cycle automatically - the manager should never
           // have to schedule their own next submission. Section 51: an
           // authorised user may override that calculated date instead.
           const nextDueDate = nextDueDateOverride || computeNextDueDate(submitted);

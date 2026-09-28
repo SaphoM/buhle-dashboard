@@ -26,7 +26,7 @@ export function KpiCard({ kpi, linkTo }: { kpi: Kpi; linkTo?: string }) {
 
       {noData ? (
         // Section 24: a KPI with nothing submitted must never imply a
-        // performance result — no fabricated number, no trend, no target line.
+        // performance result - no fabricated number, no trend, no target line.
         <div className="mt-3 flex flex-1 flex-col justify-center py-2">
           <p className="text-sm font-semibold text-ink-soft/50">Not submitted this period</p>
           <p className="mt-1 text-xs text-ink-soft/40">{kpi.insight}</p>

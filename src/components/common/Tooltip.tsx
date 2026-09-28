@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-// Shared hover/focus explainer bubble — same visual language as the Master
+// Shared hover/focus explainer bubble - same visual language as the Master
 // Data tooltips on the Administration page, but wraps inline content (a
 // table cell's text or badge) instead of a block-level row.
 export function Tooltip({ text, children }: { text?: string; children: ReactNode }) {

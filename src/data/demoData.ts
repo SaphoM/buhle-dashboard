@@ -1,5 +1,5 @@
 // ============================================================================
-// DEMO / SAMPLE DATA — NOT REAL BUHLE FARMERS ACADEMY PERFORMANCE.
+// DEMO / SAMPLE DATA - NOT REAL BUHLE FARMERS ACADEMY PERFORMANCE.
 // This dataset exists to demonstrate the platform's capability before live
 // data sources are connected. See Section 36 of the project brief.
 // ============================================================================
@@ -87,7 +87,7 @@ export const DEMO_KPIS: Kpi[] = [
     measurementFrequency: "termly",
     owner: "Head of Training",
     // Deliberately named "Learner..." to distinguish from Staff Training
-    // Completion Rate (an HR KPI) — no Operations/Training questionnaire
+    // Completion Rate (an HR KPI) - no Operations/Training questionnaire
     // has been submitted yet, so this figure and its threshold remain proposed.
     insight: "Completion rate has declined steadily over six terms; dropout analysis is recommended.",
     thresholdApproval: "proposed",
@@ -121,7 +121,7 @@ export const DEMO_KPIS: Kpi[] = [
     history: hist(3.5, [0.2, 0.3, 0.4, 0.6, 0.9, 0.9]),
     measurementFrequency: "weekly",
     owner: "Farm Manager",
-    insight: "Mortality rate has risen sharply over 6 weeks — exceeds red threshold, disease screening advised.",
+    insight: "Mortality rate has risen sharply over 6 weeks - exceeds red threshold, disease screening advised.",
   },
   {
     id: "kpi-funding",
@@ -142,7 +142,7 @@ export const DEMO_KPIS: Kpi[] = [
     // CORRECTED per the Sept 2026 HR discovery questionnaire: "we do not
     // have a proper system to track attendance... [Praxima] does not track
     // absenteeism." There is no real source for this figure yet, so it must
-    // read as No Data rather than a fabricated Green/Amber/Red — see
+    // read as No Data rather than a fabricated Green/Amber/Red - see
     // Section 24 of the discovery brief.
     id: "kpi-absenteeism",
     name: "Staff Absenteeism Rate",
@@ -159,7 +159,7 @@ export const DEMO_KPIS: Kpi[] = [
     owner: "HR Manager",
     dataAvailable: false,
     insight: "Paper attendance registers were only introduced on campus in 2026 and are not yet digitised; Praxima tracks leave, not absenteeism.",
-    sourceSystem: "No system — manual paper registers, not yet digitised",
+    sourceSystem: "No system - manual paper registers, not yet digitised",
     thresholdApproval: "proposed",
   },
   {
@@ -183,7 +183,7 @@ export const DEMO_KPIS: Kpi[] = [
     thresholdApproval: "confirmed",
   },
   {
-    // Real KPI from the HR KPI Calc workbook — not previously modelled.
+    // Real KPI from the HR KPI Calc workbook - not previously modelled.
     id: "kpi-time-to-fill",
     name: "Time to Fill",
     department: "Human Resources",
@@ -202,7 +202,7 @@ export const DEMO_KPIS: Kpi[] = [
     thresholdApproval: "confirmed",
   },
   {
-    // Real KPI from the HR KPI Calc workbook — not previously modelled.
+    // Real KPI from the HR KPI Calc workbook - not previously modelled.
     id: "kpi-cost-per-hire",
     name: "Cost per Hire",
     department: "Human Resources",
@@ -221,7 +221,7 @@ export const DEMO_KPIS: Kpi[] = [
     thresholdApproval: "confirmed",
   },
   {
-    // Real KPI from the HR KPI Calc workbook — not previously modelled.
+    // Real KPI from the HR KPI Calc workbook - not previously modelled.
     id: "kpi-offer-acceptance",
     name: "Offer Acceptance Rate",
     department: "Human Resources",
@@ -338,14 +338,14 @@ export const DEMO_RISKS: Risk[] = [
     status: "Active",
   },
   {
-    // Reframed as a data-quality risk, not a performance risk — HR confirmed
+    // Reframed as a data-quality risk, not a performance risk - HR confirmed
     // in the Sept 2026 discovery questionnaire that absenteeism is not
     // currently measurable (see kpi-absenteeism).
     id: "risk-4",
     category: "HR",
     department: "Human Resources",
     name: "Absenteeism not tracked (data gap)",
-    description: "No system currently captures staff absenteeism — paper registers introduced in 2026 are not digitised, and Praxima tracks leave only.",
+    description: "No system currently captures staff absenteeism - paper registers introduced in 2026 are not digitised, and Praxima tracks leave only.",
     kpiId: "kpi-absenteeism",
     currentValue: 0,
     target: 0,

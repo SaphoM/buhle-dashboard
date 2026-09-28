@@ -15,13 +15,13 @@ import { Tooltip } from "../components/common/Tooltip";
 
 const APPROVAL_NOTE: Record<"confirmed" | "proposed", string> = {
   confirmed:
-    "Confirmed — this target/threshold comes from a real Buhle document supplied during discovery (e.g. the HR KPI Calc workbook's own 2026 goals).",
+    "Confirmed - this target/threshold comes from a real Buhle document supplied during discovery (e.g. the HR KPI Calc workbook's own 2026 goals).",
   proposed:
-    "Proposed — a starting point from the discovery brief, not yet Board-approved (see Section 19 of the brief).",
+    "Proposed - a starting point from the discovery brief, not yet Board-approved (see Section 19 of the brief).",
 };
 
 // Same short labels the top nav already uses per department (permissions.ts
-// NAV_ITEMS) — reused here rather than inventing new department wording.
+// NAV_ITEMS) - reused here rather than inventing new department wording.
 const KPI_DEPARTMENT_TABS: { label: string; department: Department | "all" }[] = [
   { label: "All", department: "all" },
   { label: "Finance", department: "Finance" },
@@ -93,14 +93,14 @@ export function Administration() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-ink">Administration</h1>
         <p className="text-sm text-ink-soft/60">
-          System configuration — master data, KPI thresholds, users and escalation rules. Changes here do not
+          System configuration - master data, KPI thresholds, users and escalation rules. Changes here do not
           require a code change.
         </p>
       </div>
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
-          Master Data <span className="normal-case text-ink-soft/40">— shared reference codes, governed centrally rather than hard-coded per department</span>
+          Master Data <span className="normal-case text-ink-soft/40">- shared reference codes, governed centrally rather than hard-coded per department</span>
         </h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <MasterDataList title="Departments" items={DEPARTMENTS} />
@@ -195,7 +195,7 @@ export function Administration() {
         <p className="mt-2 text-xs text-ink-soft/40">
           "Confirmed" means the target/threshold comes from a real Buhle document supplied during discovery (e.g.
           the HR KPI Calc workbook's own 2026 goals). "Proposed" means it is a starting point from the discovery
-          brief, not yet Board-approved — see Section 19 of the brief.
+          brief, not yet Board-approved - see Section 19 of the brief.
         </p>
       </section>
 
@@ -217,14 +217,14 @@ export function Administration() {
                   <td className="px-4 py-2 text-ink">{u.name}</td>
                   <td className="px-4 py-2 text-ink-soft/50">{u.email}</td>
                   <td className="px-4 py-2 capitalize text-ink-soft/70">{u.role.replace("_", " ")}</td>
-                  <td className="px-4 py-2 text-ink-soft/70">{u.department ?? "—"}</td>
+                  <td className="px-4 py-2 text-ink-soft/70">{u.department ?? "-"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <p className="mt-2 text-xs text-ink-soft/40">
-          Board members are not application users — Board reporting is generated from the Executive environment
+          Board members are not application users - Board reporting is generated from the Executive environment
           instead (see Section 4 of the discovery brief). The Board persona shown elsewhere in this demo predates
           that clarification and is kept only for demonstration purposes.
         </p>
@@ -241,13 +241,13 @@ export function Administration() {
 
       <section className="rounded-3xl border border-dashed border-ink/20 bg-white/40 p-6">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
-          To Confirm Register <span className="normal-case text-ink-soft/40">— open items, not silently resolved with guesses</span>
+          To Confirm Register <span className="normal-case text-ink-soft/40">- open items, not silently resolved with guesses</span>
         </h2>
         <ul className="flex flex-col gap-2">
           {TO_CONFIRM_REGISTER.map((item, i) => (
             <li key={i} className="text-sm text-ink-soft/70">
               <span className="font-medium text-ink-soft/90">{item.item}</span>
-              {item.note && <span className="text-ink-soft/50"> — {item.note}</span>}
+              {item.note && <span className="text-ink-soft/50"> - {item.note}</span>}
             </li>
           ))}
         </ul>

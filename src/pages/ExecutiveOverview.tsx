@@ -21,7 +21,7 @@ const STRATEGIC_KPI_IDS = [
 ];
 
 function generateExecutiveInsight(kpis: Kpi[]): string[] {
-  // Rule-based summary generation — NOT AI-generated. Picks the most material
+  // Rule-based summary generation - NOT AI-generated. Picks the most material
   // red/amber KPIs and states variance in plain language. KPIs with nothing
   // submitted are excluded here (variance is meaningless) and surfaced
   // separately as a data-quality gap instead.
@@ -33,7 +33,7 @@ function generateExecutiveInsight(kpis: Kpi[]): string[] {
 
 function generateDataQualityNotes(kpis: Kpi[]): string[] {
   return kpis.filter((k) => k.dataAvailable === false).map(
-    (k) => `${k.department}: "${k.name}" has not been submitted this period — ${k.insight}`
+    (k) => `${k.department}: "${k.name}" has not been submitted this period - ${k.insight}`
   );
 }
 
@@ -41,7 +41,7 @@ export function ExecutiveOverview() {
   const { user } = useAuth();
   const { kpis: allKpis, cycles: allCycles, risks: allRisks, actions: allActions } = useDataStore();
 
-  // Section 57 — one row per department: the soonest-due cycle that isn't
+  // Section 57 - one row per department: the soonest-due cycle that isn't
   // closed, so the Executive can see at a glance who has submitted, who's
   // due soon, and who's overdue, without opening each department.
   const departmentsWithCycles = Array.from(new Set(allCycles.map((c) => c.department)));
@@ -58,7 +58,7 @@ export function ExecutiveOverview() {
   const counts = { green: 0, amber: 0, red: 0, no_data: 0 };
   allKpis.forEach((k) => counts[getStatus(k)]++);
   const total = allKpis.length;
-  // Organisational health is scored only over KPIs that actually have data —
+  // Organisational health is scored only over KPIs that actually have data -
   // a missing figure is a data-quality problem, not evidence of good or bad
   // performance, so it must not silently inflate or deflate the score.
   const reportingTotal = total - counts.no_data;
@@ -90,7 +90,7 @@ export function ExecutiveOverview() {
         <div>
           <h1 className="text-4xl font-bold tracking-tight text-ink">Welcome back, {user?.name.split(" ")[0]}</h1>
           <p className="mt-1 text-sm text-ink-soft/60">
-            Buhle Farmers Academy — organisational health for September 2026.
+            Buhle Farmers Academy - organisational health for September 2026.
           </p>
         </div>
         <DataFreshnessTag label="Updated today" source="Demo dataset" />
@@ -124,7 +124,7 @@ export function ExecutiveOverview() {
           <CircularRing value={score} label={`${score}`} sublabel="/ 100" />
           <div>
             <p className="text-sm font-semibold text-white">Organisational Health</p>
-            <p className="text-xs text-white/50">{score >= 75 ? "Healthy" : score >= 55 ? "Needs Attention" : "Critical — Act Now"}</p>
+            <p className="text-xs text-white/50">{score >= 75 ? "Healthy" : score >= 55 ? "Needs Attention" : "Critical - Act Now"}</p>
           </div>
         </div>
 
@@ -180,7 +180,7 @@ export function ExecutiveOverview() {
       {/* Section 57: consolidated view of departmental submission status */}
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
-          Departmental Submission Status <span className="normal-case text-ink-soft/40">— is the data current?</span>
+          Departmental Submission Status <span className="normal-case text-ink-soft/40">- is the data current?</span>
         </h2>
         <div className="card-surface overflow-hidden rounded-3xl border border-ink/10 shadow-sm">
           <table className="w-full text-left text-sm">
@@ -270,7 +270,7 @@ export function ExecutiveOverview() {
 
       <section className="card-surface rounded-3xl border border-ink/10 p-6 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
-          Executive Insight <span className="font-normal normal-case text-ink-soft/40">(rule-based, calculated from KPI variance — not AI-generated)</span>
+          Executive Insight <span className="font-normal normal-case text-ink-soft/40">(rule-based, calculated from KPI variance - not AI-generated)</span>
         </h2>
         <ul className="flex flex-col gap-2">
           {insights.map((text, i) => (
@@ -285,7 +285,7 @@ export function ExecutiveOverview() {
       {dataQualityNotes.length > 0 && (
         <section className="rounded-3xl border border-dashed border-ink/20 bg-white/40 p-6">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
-            Data Quality — Not Submitted
+            Data Quality - Not Submitted
           </h2>
           <ul className="flex flex-col gap-2">
             {dataQualityNotes.map((text, i) => (

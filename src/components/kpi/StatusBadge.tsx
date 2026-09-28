@@ -1,9 +1,9 @@
 import type { RagStatus } from "../../types";
 import { statusLabel } from "../../data/kpiEngine";
 
-// Pill styling echoes the "15% / 60% / 10%" stat pills in the reference UI —
+// Pill styling echoes the "15% / 60% / 10%" stat pills in the reference UI -
 // filled dark for critical, filled butter-yellow for emerging risk, soft
-// outline for on-target — while keeping green/amber/red legible via the dot.
+// outline for on-target - while keeping green/amber/red legible via the dot.
 const styles: Record<RagStatus, string> = {
   green: "bg-white text-ink-soft border-ink/15",
   amber: "bg-butter text-ink border-butter-dark",

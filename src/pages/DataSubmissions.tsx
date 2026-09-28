@@ -37,7 +37,7 @@ export function DataSubmissions() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-ink">Data / Submissions</h1>
         <p className="text-sm text-ink-soft/60">
-          Every recurring dataset each department owns, with its own frequency and due date — so nobody has to
+          Every recurring dataset each department owns, with its own frequency and due date - so nobody has to
           remember what's due next.
         </p>
       </div>
@@ -45,7 +45,7 @@ export function DataSubmissions() {
       {overdueCount > 0 && (
         <div className="rounded-3xl border border-dashed border-ink/20 bg-white/40 px-5 py-3 text-sm text-ink-soft/70">
           <span className="font-semibold text-ink">{overdueCount} submission{overdueCount === 1 ? "" : "s"} overdue</span>
-          {" "}across departments that have not yet engaged with discovery — see the To Confirm Register in Administration.
+          {" "}across departments that have not yet engaged with discovery - see the To Confirm Register in Administration.
         </div>
       )}
 

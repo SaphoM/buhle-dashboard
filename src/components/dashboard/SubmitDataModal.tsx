@@ -43,7 +43,7 @@ export function SubmitDataModal({
   const [submitted, setSubmitted] = useState(false);
   // Staged here on Submit, but not written to the store (and so no EWS
   // alert/toast is raised) until the user acknowledges the confirmation
-  // screen by closing it — the toast is meant to fire on Done, not on Submit.
+  // screen by closing it - the toast is meant to fire on Done, not on Submit.
   const pendingSubmission = useRef<{
     entries: { kpiId: string; value: number }[];
     cycleId: string;
@@ -58,7 +58,7 @@ export function SubmitDataModal({
   const effectiveNextDate = nextDateOverride ?? calculatedNextDate;
 
   // Section 52/53: the one EWS indicator relevant to this department/dataset,
-  // evaluated live from what's currently typed — not a generic list of every
+  // evaluated live from what's currently typed - not a generic list of every
   // indicator in the system, and never asks the user to pick Green/Amber/Red.
   const primaryKpi = deptKpis.find((k) => k.id === selectedCycle?.primaryKpiId);
   const primaryRaw = primaryKpi ? values[primaryKpi.id] : undefined;
@@ -93,7 +93,7 @@ export function SubmitDataModal({
       open={open}
       onClose={handleClose}
       title={`Submit ${department} Data`}
-      subtitle="Recorded to this demo session only — no backend is connected yet."
+      subtitle="Recorded to this demo session only - no backend is connected yet."
     >
       {submitted ? (
         <div className="flex flex-col items-center gap-3 py-6 text-center">
@@ -103,7 +103,7 @@ export function SubmitDataModal({
           <p className="text-sm font-medium text-ink">Submission recorded.</p>
           <p className="text-xs text-ink-soft/50">
             KPI values, the Early Warning status and the next submission date have all been updated across the
-            dashboard — no manual refresh needed.
+            dashboard - no manual refresh needed.
           </p>
           <button
             onClick={handleClose}
@@ -157,7 +157,7 @@ export function SubmitDataModal({
                 >
                   {openCycles.map((c) => (
                     <option key={c.cycleId} value={c.cycleId}>
-                      {c.dataset} — {c.reportingPeriod}
+                      {c.dataset} - {c.reportingPeriod}
                     </option>
                   ))}
                 </select>

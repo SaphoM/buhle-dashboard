@@ -36,7 +36,7 @@ export function DepartmentDashboard({
     .sort((a, b) => new Date(a.cycle.dueDate).getTime() - new Date(b.cycle.dueDate).getTime());
   const nextCycle = deptCycles[0];
 
-  // Department health widgets — same language as the Executive Overview,
+  // Department health widgets - same language as the Executive Overview,
   // scoped to this department, so managers get the same at-a-glance read.
   const counts = { green: 0, amber: 0, red: 0, no_data: 0 };
   kpis.forEach((k) => counts[getStatus(k)]++);
@@ -75,7 +75,7 @@ export function DepartmentDashboard({
         <section className="card-surface rounded-3xl border border-ink/10 p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft/50">
-              Data Submission <span className="normal-case text-ink-soft/40">— is the department reporting on time?</span>
+              Data Submission <span className="normal-case text-ink-soft/40">- is the department reporting on time?</span>
             </h2>
             <Link to="/data" className="text-xs font-semibold text-ink hover:underline">
               View all submissions →
@@ -106,9 +106,9 @@ export function DepartmentDashboard({
       {total > 0 && (
         <>
           <h2 className="-mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft/50">
-            Business Performance <span className="normal-case text-ink-soft/40">— is what was submitted actually on target?</span>
+            Business Performance <span className="normal-case text-ink-soft/40">- is what was submitted actually on target?</span>
           </h2>
-          {/* Stat pills row — same read as the Executive Overview, scoped to this department */}
+          {/* Stat pills row - same read as the Executive Overview, scoped to this department */}
           <div className="flex flex-wrap items-center justify-between gap-6 rounded-3xl border border-ink/10 bg-white/60 px-6 py-5">
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-xs font-medium uppercase tracking-wide text-ink-soft/50">KPI status</span>
@@ -129,14 +129,14 @@ export function DepartmentDashboard({
             </div>
           </div>
 
-          {/* Widget row — health ring / primary KPI trend / risk pulse / actions */}
+          {/* Widget row - health ring / primary KPI trend / risk pulse / actions */}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
             <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-ink p-6 text-center shadow-sm">
               <CircularRing value={score} size={120} stroke={10} label={`${score}`} sublabel="/ 100" />
               <div>
                 <p className="text-sm font-semibold text-white">Department Health</p>
                 <p className="text-xs text-white/50">
-                  {score >= 75 ? "Healthy" : score >= 55 ? "Needs Attention" : "Critical — Act Now"}
+                  {score >= 75 ? "Healthy" : score >= 55 ? "Needs Attention" : "Critical - Act Now"}
                 </p>
               </div>
             </div>
@@ -152,7 +152,7 @@ export function DepartmentDashboard({
                   </div>
                 </div>
                 <div className="mt-3">
-                  <MiniBarTrend data={spotlightKpi.history.length > 0 ? spotlightKpi.history : [{ period: "—", value: 0 }]} />
+                  <MiniBarTrend data={spotlightKpi.history.length > 0 ? spotlightKpi.history : [{ period: "-", value: 0 }]} />
                 </div>
               </div>
             )}
@@ -235,7 +235,7 @@ export function DepartmentDashboard({
                       </td>
                       <td className="px-4 py-3 text-ink-soft/70">{r.owner}</td>
                       <td className="px-4 py-3 text-ink-soft/70">
-                        {action ? `${action.description} (${action.status})` : "—"}
+                        {action ? `${action.description} (${action.status})` : "-"}
                       </td>
                     </tr>
                   );

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useDataStore } from "../../data/DataStoreContext";
 
-// The visible half of "alert and react" (Section 62, step 7 — "Create
+// The visible half of "alert and react" (Section 62, step 7 - "Create
 // alerts where necessary"). A risk being created/escalated/resolved by the
-// EWS engine is silent unless something actually surfaces it — this renders
+// EWS engine is silent unless something actually surfaces it - this renders
 // each new alert as a dismissible toast, auto-clearing after a few seconds,
 // stacked top-right.
 
@@ -26,7 +26,7 @@ export function AlertToasts() {
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
   // Tracks every alert id ever seen so a submission that raises two alerts
   // at once (e.g. a new risk + its auto-created action) shows both, not
-  // just alerts[0] — a single "newest" pointer would silently drop the rest.
+  // just alerts[0] - a single "newest" pointer would silently drop the rest.
   const seenIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {

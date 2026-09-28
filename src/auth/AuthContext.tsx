@@ -3,7 +3,7 @@ import type { AppUser } from "../types";
 import { DEMO_USERS } from "../data/demoData";
 
 // MVP auth: demo-mode role selection. Real deployment will use Supabase Auth
-// (email/password, RLS-backed roles) per the technical recommendation —
+// (email/password, RLS-backed roles) per the technical recommendation -
 // this context's shape is designed to swap in that implementation without
 // touching any page component.
 

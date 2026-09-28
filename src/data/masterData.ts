@@ -6,10 +6,10 @@
 // the app (per the Sept 2026 discovery brief, Sections 6–7).
 //
 // Every entry is labelled with its evidence status:
-//   "confirmed" — verified against a real Buhle document supplied during
+//   "confirmed" - verified against a real Buhle document supplied during
 //                 discovery (the Finance budget monitor, HR KPI workbooks,
 //                 or a department questionnaire).
-//   "proposed"  — a sensible starting point suggested in the discovery brief,
+//   "proposed"  - a sensible starting point suggested in the discovery brief,
 //                 not yet evidenced in a real Buhle document.
 // Nothing here should be treated as final until an administrator confirms it.
 // ============================================================================
@@ -24,7 +24,7 @@ export interface MasterRecord {
 }
 
 // Confirmed directly from "Final Budget monitor for 2026 ending September
-// 2026.xlsx" (Finance discovery submission, Sept 2026) — these are the three
+// 2026.xlsx" (Finance discovery submission, Sept 2026) - these are the three
 // actual cost-centre tabs in Buhle's own budget monitor.
 const BUDGET_MONITOR_NOTE =
   "Confirmed directly from Buhle's own 2026 Budget Monitor (Finance discovery submission, Sept 2026).";
@@ -36,11 +36,11 @@ export const COST_CENTRES: MasterRecord[] = [
 ];
 
 // Listed in the discovery brief as example funder/project codes. Not present
-// as a column in the actual Finance budget monitor supplied — the workbook
+// as a column in the actual Finance budget monitor supplied - the workbook
 // only carries a Cost Centre column, not a funder/project tag. Treat these as
 // proposed until Finance confirms how (or whether) they track this.
 const FUNDER_CODE_NOTE =
-  "Listed as an example funder in the discovery brief — not present as a column in the actual Finance budget monitor supplied. Treat as proposed until Finance confirms.";
+  "Listed as an example funder in the discovery brief - not present as a column in the actual Finance budget monitor supplied. Treat as proposed until Finance confirms.";
 
 export const FUNDER_CODES: MasterRecord[] = [
   { code: "TSHIKULULU", label: "Tshikululu", status: "proposed", note: FUNDER_CODE_NOTE },
@@ -53,7 +53,7 @@ export const FUNDER_CODES: MasterRecord[] = [
 // the remainder are proposed in the discovery brief but not yet evidenced.
 const ENTERPRISE_CONFIRMED_NOTE = "Confirmed as a line item in Buhle's Finance budget monitor.";
 const ENTERPRISE_PROPOSED_NOTE =
-  "Proposed in the discovery brief — not yet evidenced as a line item in a supplied Finance document.";
+  "Proposed in the discovery brief - not yet evidenced as a line item in a supplied Finance document.";
 
 export const ENTERPRISE_CODES: MasterRecord[] = [
   { code: "MAIZE", label: "Maize", status: "confirmed", note: ENTERPRISE_CONFIRMED_NOTE },
@@ -88,67 +88,67 @@ export const DEPARTMENTS: DepartmentRecord[] = [
     label: "Finance",
     status: "confirmed",
     manager: "Thabiso Nthane (Manager)",
-    note: "Confirmed — Thabiso Nthane (Manager) returned the Finance questionnaire with real budget data, Sept 2026.",
+    note: "Confirmed - Thabiso Nthane (Manager) returned the Finance questionnaire with real budget data, Sept 2026.",
   },
   {
     code: "HR",
     label: "Human Resources",
     status: "confirmed",
     manager: "Zintle Bebeza (HR Manager)",
-    note: "Confirmed — Zintle Bebeza (HR Manager) returned the HR questionnaire with real KPI Calc workbook data, Sept 2026.",
+    note: "Confirmed - Zintle Bebeza (HR Manager) returned the HR questionnaire with real KPI Calc workbook data, Sept 2026.",
   },
   {
     code: "OPERATIONS",
     label: "Training / Operations",
     status: "proposed",
     manager: "TO CONFIRM",
-    note: "Proposed — named in the discovery brief; manager and data not yet confirmed.",
+    note: "Proposed - named in the discovery brief; manager and data not yet confirmed.",
   },
   {
     code: "COMMERCIAL_FARMING",
     label: "Commercial Farming",
     status: "proposed",
     manager: "TO CONFIRM",
-    note: "Proposed — named in the discovery brief; manager and data not yet confirmed.",
+    note: "Proposed - named in the discovery brief; manager and data not yet confirmed.",
   },
   {
     code: "VEGETABLE_PRODUCTION",
     label: "Vegetable Production",
     status: "to_confirm",
     manager: "TO CONFIRM",
-    note: "To Confirm — whether this shares a manager with Commercial Farming or Livestock is still open.",
+    note: "To Confirm - whether this shares a manager with Commercial Farming or Livestock is still open.",
   },
   {
     code: "LIVESTOCK",
     label: "Livestock",
     status: "to_confirm",
     manager: "TO CONFIRM",
-    note: "To Confirm — whether this shares a manager with Commercial Farming or Vegetable Production is still open.",
+    note: "To Confirm - whether this shares a manager with Commercial Farming or Vegetable Production is still open.",
   },
   {
     code: "MARKETING",
     label: "Marketing",
     status: "proposed",
     manager: "TO CONFIRM",
-    note: "Proposed — no Marketing questionnaire submitted yet.",
+    note: "Proposed - no Marketing questionnaire submitted yet.",
   },
   {
     code: "ALUMNI",
     label: "Alumni",
     status: "proposed",
     manager: "TO CONFIRM",
-    note: "Proposed — no Alumni questionnaire submitted yet.",
+    note: "Proposed - no Alumni questionnaire submitted yet.",
   },
 ];
 
 // Where each figure actually originates today, per the Sept 2026 discovery
-// questionnaires — used to label KPI cards so nobody mistakes a manually
+// questionnaires - used to label KPI cards so nobody mistakes a manually
 // captured number for a live feed.
 export const DATA_SOURCES: Record<string, string> = {
   finance: "Pastel (transactions) → Budget Monitor spreadsheet (manual)",
   hrTurnoverEtc: "HR KPI Calc workbook (manual)",
-  hrLeave: "Praxima (leave only — does not track absenteeism)",
-  hrAttendance: "Paper attendance registers, introduced 2026 — not yet digitised",
+  hrLeave: "Praxima (leave only - does not track absenteeism)",
+  hrAttendance: "Paper attendance registers, introduced 2026 - not yet digitised",
 };
 
 export const TO_CONFIRM_REGISTER: { item: string; note?: string }[] = [
@@ -162,7 +162,7 @@ export const TO_CONFIRM_REGISTER: { item: string; note?: string }[] = [
   { item: "Marketing vs Business Development ownership" },
   { item: "Board approval of threshold register" },
   { item: "Final reporting frequencies" },
-  { item: "Finance system of record", note: "Confirmed as Pastel (not Sage) — see Finance questionnaire, 22 Sept 2026." },
+  { item: "Finance system of record", note: "Confirmed as Pastel (not Sage) - see Finance questionnaire, 22 Sept 2026." },
   { item: "Exact hosting/deployment environment", note: "Currently a static demo on GitHub Pages with in-memory demo auth; no backend/database yet." },
   { item: "Final notification provider" },
   { item: "Final historical data availability", note: "HR has 2025 + 2026 data; Finance has 2026 budget monitor only, so far." },

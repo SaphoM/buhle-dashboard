@@ -1,8 +1,8 @@
 // ============================================================================
-// DEMO / SAMPLE DATA — Data Collection Cycles.
+// DEMO / SAMPLE DATA - Data Collection Cycles.
 // Frequencies and engagement levels are grounded in the real Sept 2026
 // discovery evidence: Finance (Pastel → Budget Monitor, updated monthly)
-// and HR (KPI Calc workbook, run quarterly — Q1/Q2/Q3 2026 sheets already
+// and HR (KPI Calc workbook, run quarterly - Q1/Q2/Q3 2026 sheets already
 // exist) have actually engaged. Operations, Commercial Farming, Marketing
 // and Alumni have not yet submitted a discovery questionnaire, which this
 // dataset reflects honestly (Upcoming/Overdue rather than In Progress).
@@ -22,9 +22,9 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     status: "In Progress",
     owner: "Finance Manager",
     completionPct: 65,
-    notes: "Confirmed cadence — the real Budget Monitor workbook is updated monthly per the Finance discovery questionnaire.",
+    notes: "Confirmed cadence - the real Budget Monitor workbook is updated monthly per the Finance discovery questionnaire.",
     // Closest existing analogue to "Budget Remaining" (Section 52's Finance
-    // example) — the app does not yet model a literal budget-remaining KPI.
+    // example) - the app does not yet model a literal budget-remaining KPI.
     primaryKpiId: "kpi-surplus",
   },
   {
@@ -39,25 +39,25 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     status: "In Progress",
     owner: "HR Manager",
     completionPct: 70,
-    notes: "Confirmed cadence — Q1/Q2/Q3 2026 sheets already exist in the real HR workbook.",
+    notes: "Confirmed cadence - Q1/Q2/Q3 2026 sheets already exist in the real HR workbook.",
     primaryKpiId: "kpi-turnover",
   },
   {
     cycleId: "cyc-hr-attendance-2026-09",
     department: "Human Resources",
     dataset: "Staff Attendance Register",
-    description: "Digitised daily attendance — not yet possible; paper registers only.",
+    description: "Digitised daily attendance - not yet possible; paper registers only.",
     frequency: "Daily",
     reportingPeriod: "September 2026",
     startDate: "2026-09-01",
     dueDate: "2026-09-20",
-    // Baseline status is "Open", not "Overdue" — getEffectiveStatus derives
+    // Baseline status is "Open", not "Overdue" - getEffectiveStatus derives
     // Overdue automatically once the due date passes, per Section 48
     // ("the system must calculate these automatically where possible").
     status: "Open",
     owner: "HR Manager",
     completionPct: 0,
-    notes: "No digital system exists yet — see the Staff Absenteeism Rate KPI (No Data) and the Administration → To Confirm Register.",
+    notes: "No digital system exists yet - see the Staff Absenteeism Rate KPI (No Data) and the Administration → To Confirm Register.",
     primaryKpiId: "kpi-absenteeism",
   },
   {

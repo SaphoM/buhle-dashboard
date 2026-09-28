@@ -29,7 +29,7 @@ const reports = [
   {
     id: "board",
     name: "Board Report",
-    description: "High-level strategic summary for Board members — organisational health and material risks only.",
+    description: "High-level strategic summary for Board members - organisational health and material risks only.",
   },
 ];
 
@@ -67,7 +67,7 @@ export function Reports() {
             <h3 className="font-semibold text-ink">{r.name}</h3>
             <p className="mt-1 text-sm text-ink-soft/60">{r.description}</p>
             <span className="mt-3 inline-block rounded-full bg-ink/5 px-2.5 py-1 text-xs text-ink-soft/50">
-              PDF export — Phase 2
+              PDF export - Phase 2
             </span>
           </div>
         ))}

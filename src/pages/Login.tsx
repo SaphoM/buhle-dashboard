@@ -22,7 +22,7 @@ export function Login() {
   const [showDemoNotice, setShowDemoNotice] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
 
-  // Placeholder submit handler — wired up to Supabase Auth in production.
+  // Placeholder submit handler - wired up to Supabase Auth in production.
   // For now it just points the user at the demo accounts below.
   function handleProductionSignIn(e: FormEvent) {
     e.preventDefault();
@@ -39,7 +39,7 @@ export function Login() {
           <p className="text-sm text-ink-soft/60">Integrated Business Dashboard &amp; Early Warning System</p>
         </div>
 
-        {/* Production sign-in form — UI scaffolding for Supabase Auth.
+        {/* Production sign-in form - UI scaffolding for Supabase Auth.
             Not yet wired to a real backend; submitting points to demo accounts. */}
         <form onSubmit={handleProductionSignIn} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-left">
@@ -74,7 +74,7 @@ export function Login() {
 
         {showDemoNotice && (
           <p className="mt-3 rounded-2xl border border-butter-dark/40 bg-butter/30 px-3 py-2 text-xs text-ink-soft/80">
-            Production sign-in (Supabase Auth) isn't connected yet — use a demo account below instead.
+            Production sign-in (Supabase Auth) isn't connected yet - use a demo account below instead.
           </p>
         )}
 
@@ -91,7 +91,7 @@ export function Login() {
         {demoOpen && (
           <div className="mt-3 flex flex-col gap-2">
             <div className="rounded-2xl border border-butter-dark/40 bg-butter/30 px-3 py-2 text-xs text-ink-soft/80">
-              Demo mode — select a role below to sign in instantly without a password. Production deployment will
+              Demo mode - select a role below to sign in instantly without a password. Production deployment will
               use secure authentication (Supabase Auth) with real Buhle user accounts.
             </div>
             {users.map((u) => (

@@ -1,11 +1,11 @@
 import type { CorrectiveAction, Department, Kpi, RagStatus, Risk, RiskCategory } from "../types";
 
 /**
- * EWS reaction engine (Section 62, steps 5-7 — "Create/update risks if
+ * EWS reaction engine (Section 62, steps 5-7 - "Create/update risks if
  * necessary. Create alerts where necessary."). Until now, crossing a
  * threshold only recoloured a badge; nothing was actually created. This is
  * what turns a submitted value into a real Risk record that shows up in the
- * Risk Centre, dashboards and (eventually) Corrective Actions — the
+ * Risk Centre, dashboards and (eventually) Corrective Actions - the
  * "alert and react" half of the loop, not just the "detect" half.
  */
 
@@ -46,7 +46,7 @@ export function reconcileRiskForKpi(
   prevRisks: Risk[]
 ): { risks: Risk[]; alert: EwsAlert | null; createdRisk?: Risk } {
   const today = new Date().toISOString().slice(0, 10);
-  // Match on kpiId, not a fixed id — several demo risks were hand-authored
+  // Match on kpiId, not a fixed id - several demo risks were hand-authored
   // (risk-5, risk-6, ...) before this engine existed. Matching only the
   // risk-auto-<kpiId> convention would miss those and create a duplicate
   // risk for the same KPI instead of updating the one already there.
@@ -61,7 +61,7 @@ export function reconcileRiskForKpi(
           id: `alert-${existing.id}-${Date.now()}`,
           kind: "resolved",
           level: "green",
-          message: `Resolved: "${kpi.name}" is back on target — ${kpi.department}.`,
+          message: `Resolved: "${kpi.name}" is back on target - ${kpi.department}.`,
           timestamp: today,
         },
       };
@@ -94,7 +94,7 @@ export function reconcileRiskForKpi(
             id: `alert-${existing.id}-${Date.now()}`,
             kind: "escalated",
             level: newStatus,
-            message: `${newStatus === "red" ? "Escalated to Critical" : "Downgraded to Emerging"}: "${kpi.name}" — ${kpi.department}.`,
+            message: `${newStatus === "red" ? "Escalated to Critical" : "Downgraded to Emerging"}: "${kpi.name}" - ${kpi.department}.`,
             timestamp: today,
           }
         : null,
@@ -126,7 +126,7 @@ export function reconcileRiskForKpi(
       id: `alert-${id}-${Date.now()}`,
       kind: "created",
       level: newStatus,
-      message: `${newStatus === "red" ? "New Critical risk" : "New Emerging risk"}: "${kpi.name}" — ${kpi.department}.`,
+      message: `${newStatus === "red" ? "New Critical risk" : "New Emerging risk"}: "${kpi.name}" - ${kpi.department}.`,
       timestamp: today,
     },
   };
@@ -134,7 +134,7 @@ export function reconcileRiskForKpi(
 
 /**
  * Section 22/62: when a risk is newly raised, don't just leave it sitting
- * there — stage a corrective action automatically so there's always
+ * there - stage a corrective action automatically so there's always
  * something owned and due, not just a coloured record. Due date follows the
  * same escalation urgency as the risk itself: Red gets 5 working days
  * (~7 calendar days), Amber gets 14.

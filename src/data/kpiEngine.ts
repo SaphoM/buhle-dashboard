@@ -3,7 +3,7 @@ import type { Kpi, RagStatus, TrendDirection } from "../types";
 /**
  * KPI & Rules Engine (MVP)
  * ------------------------
- * Pure, configurable, rule-based evaluation — no ML, no external calls.
+ * Pure, configurable, rule-based evaluation - no ML, no external calls.
  * Thresholds live on the KPI record itself so they can move to an admin-editable
  * config/table without changing this logic (see Section 9 of the brief).
  */
@@ -13,7 +13,7 @@ export function getStatus(kpi: Kpi): RagStatus {
 }
 
 /**
- * Section 53: "the application must calculate the resulting RAG status" —
+ * Section 53: "the application must calculate the resulting RAG status" -
  * evaluates an arbitrary candidate value against a KPI's own thresholds,
  * so the submission modal can show a live status as the manager types,
  * before that value has actually been saved as the KPI's currentValue.
@@ -80,6 +80,6 @@ export const statusLabel: Record<RagStatus, string> = {
 export const statusMeaning: Record<RagStatus, string> = {
   green: "Continue monitoring and continuous improvement.",
   amber: "Develop a corrective action plan and monitor closely.",
-  red: "Escalate to Executive Management / Board — immediate intervention required.",
-  no_data: "No figure submitted for this department/period yet — this is a data-quality gap, not a performance result.",
+  red: "Escalate to Executive Management / Board - immediate intervention required.",
+  no_data: "No figure submitted for this department/period yet - this is a data-quality gap, not a performance result.",
 };
