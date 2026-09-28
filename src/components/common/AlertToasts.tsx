@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDataStore } from "../../data/DataStoreContext";
 
 // The visible half of "alert and react" (Section 62, step 7 — "Create
@@ -24,21 +24,33 @@ const levelIcon: Record<string, string> = {
 export function AlertToasts() {
   const { alerts, dismissAlert } = useDataStore();
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
+  // Tracks every alert id ever seen so a submission that raises two alerts
+  // at once (e.g. a new risk + its auto-created action) shows both, not
+  // just alerts[0] — a single "newest" pointer would silently drop the rest.
+  const seenIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (alerts.length === 0) return;
-    const newest = alerts[0];
-    setVisibleIds((prev) => new Set(prev).add(newest.id));
-    const timer = setTimeout(() => {
-      setVisibleIds((prev) => {
-        const next = new Set(prev);
-        next.delete(newest.id);
-        return next;
-      });
-    }, 8000);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alerts[0]?.id]);
+    const freshAlerts = alerts.filter((a) => !seenIds.current.has(a.id));
+    if (freshAlerts.length === 0) return;
+    freshAlerts.forEach((a) => seenIds.current.add(a.id));
+
+    setVisibleIds((prev) => {
+      const next = new Set(prev);
+      freshAlerts.forEach((a) => next.add(a.id));
+      return next;
+    });
+
+    const timers = freshAlerts.map((a) =>
+      setTimeout(() => {
+        setVisibleIds((prev) => {
+          const next = new Set(prev);
+          next.delete(a.id);
+          return next;
+        });
+      }, 8000)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [alerts]);
 
   const shown = alerts.filter((a) => visibleIds.has(a.id)).slice(0, 4);
   if (shown.length === 0) return null;
