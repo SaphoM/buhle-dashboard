@@ -5,6 +5,7 @@ import { SelectChevron } from "../common/SelectChevron";
 import { StatusBadge } from "../kpi/StatusBadge";
 import { useDataStore } from "../../data/DataStoreContext";
 import { useAuth } from "../../auth/AuthContext";
+import { useToast } from "../common/ToastContext";
 import { computeNextDueDate, getEffectiveStatus } from "../../data/cycleEngine";
 import { formatTarget, getStatusForValue } from "../../data/kpiEngine";
 
@@ -27,6 +28,7 @@ export function SubmitDataModal({
 }) {
   const { kpis, cycles, submitKpiValues, submitCycle } = useDataStore();
   const { user } = useAuth();
+  const toast = useToast();
   const canOverrideDate = user?.role === "admin" || user?.role === "executive";
 
   const deptKpis = kpis.filter((k) => k.department === department);
@@ -79,8 +81,21 @@ export function SubmitDataModal({
   function handleClose() {
     const pending = pendingSubmission.current;
     if (pending) {
-      if (pending.entries.length > 0) submitKpiValues(pending.entries);
-      if (pending.cycleId) submitCycle(pending.cycleId, user?.name ?? "Unknown", pending.nextDate);
+      try {
+        const newAlerts = pending.entries.length > 0 ? submitKpiValues(pending.entries) : [];
+        if (pending.cycleId) submitCycle(pending.cycleId, user?.name ?? "Unknown", pending.nextDate);
+        // One toast for the whole submission - fold in the worst EWS outcome
+        // it triggered rather than firing a second, separate risk toast.
+        if (newAlerts.some((a) => a.level === "red")) {
+          toast.error(`${department} submission saved - Red warning detected`);
+        } else if (newAlerts.some((a) => a.level === "amber")) {
+          toast.warning(`${department} submission saved - Amber warning detected`);
+        } else {
+          toast.success(`${department} submission saved successfully`);
+        }
+      } catch {
+        toast.error(`Unable to save ${department} submission`);
+      }
       pendingSubmission.current = null;
     }
     setSubmitted(false);

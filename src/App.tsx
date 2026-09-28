@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { DataStoreProvider } from "./data/DataStoreContext";
+import { ToastProvider } from "./components/common/ToastContext";
 import { canAccess, getHomePath } from "./auth/permissions";
 import { AppShell } from "./components/layout/AppShell";
 import { Login } from "./pages/Login";
@@ -58,10 +59,12 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <DataStoreProvider>
-        <AppRoutes />
-      </DataStoreProvider>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <DataStoreProvider>
+          <AppRoutes />
+        </DataStoreProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }

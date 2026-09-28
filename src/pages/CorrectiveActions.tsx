@@ -1,5 +1,8 @@
 import { useDataStore } from "../data/DataStoreContext";
+import { useToast } from "../components/common/ToastContext";
 import type { ActionStatus } from "../types";
+
+const ACTION_STATUS_ORDER: ActionStatus[] = ["Open", "In Progress", "Completed"];
 
 const statusStyles: Record<ActionStatus, string> = {
   Open: "bg-ink/5 text-ink-soft/70",
@@ -11,7 +14,19 @@ const statusStyles: Record<ActionStatus, string> = {
 
 export function CorrectiveActions() {
   const { risks, actions, advanceActionStatus } = useDataStore();
+  const toast = useToast();
   const riskMap = new Map(risks.map((r) => [r.id, r]));
+
+  function handleAdvance(actionId: string, currentStatus: ActionStatus) {
+    advanceActionStatus(actionId);
+    const idx = ACTION_STATUS_ORDER.indexOf(currentStatus);
+    const nextStatus = idx >= 0 ? ACTION_STATUS_ORDER[idx + 1] : undefined;
+    if (nextStatus === "Completed") {
+      toast.success("Action completed successfully");
+    } else if (nextStatus) {
+      toast.success(`Action status updated to ${nextStatus}`);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -59,7 +74,7 @@ export function CorrectiveActions() {
                   <td className="px-4 py-3">
                     {a.status !== "Completed" && a.status !== "Cancelled" && (
                       <button
-                        onClick={() => advanceActionStatus(a.id)}
+                        onClick={() => handleAdvance(a.id, a.status)}
                         className="text-xs font-semibold text-ink hover:underline"
                       >
                         Advance →

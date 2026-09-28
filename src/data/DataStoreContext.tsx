@@ -16,7 +16,6 @@ interface DataStoreValue {
   cycles: DataCollectionCycle[];
   risks: Risk[];
   actions: CorrectiveAction[];
-  alerts: EwsAlert[];
   /**
    * Records values for one or more KPIs in a single atomic step - clears
    * "no data", shifts history forward, then reacts: creates/escalates/
@@ -24,9 +23,11 @@ interface DataStoreValue {
    * Takes a batch (not one call per KPI) so a single submission that trips
    * two thresholds at once evaluates correctly - each call in a loop would
    * otherwise read the same pre-submission risks snapshot and clobber each
-   * other's new risk records.
+   * other's new risk records. Returns what changed so the caller (the
+   * submission modal) can raise one composite confirmation toast instead of
+   * a separate notification per risk event.
    */
-  submitKpiValues: (entries: { kpiId: string; value: number }[]) => void;
+  submitKpiValues: (entries: { kpiId: string; value: number }[]) => EwsAlert[];
   /**
    * Marks a cycle as submitted, then re-evaluates the cycle engine (Section
    * 62): calculates the next submission date and opens the next cycle
@@ -45,7 +46,6 @@ interface DataStoreValue {
     kpiId: string,
     updates: Partial<Pick<Kpi, "target" | "greenThreshold" | "amberThreshold">>
   ) => void;
-  dismissAlert: (alertId: string) => void;
   /** Advances an action Open -> In Progress -> Completed (used by the
    *  Corrective Actions page's "Advance" control). */
   advanceActionStatus: (actionId: string) => void;
@@ -58,7 +58,6 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [cycles, setCycles] = useState<DataCollectionCycle[]>(DEMO_CYCLES);
   const [risks, setRisks] = useState<Risk[]>(DEMO_RISKS);
   const [actions, setActions] = useState<CorrectiveAction[]>(DEMO_ACTIONS);
-  const [alerts, setAlerts] = useState<EwsAlert[]>([]);
 
   const value = useMemo<DataStoreValue>(
     () => ({
@@ -66,7 +65,6 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       cycles,
       risks,
       actions,
-      alerts,
       submitKpiValues: (entries) => {
         // Computed synchronously against the current closure snapshot and
         // committed with plain (non-functional) setState calls - everything
@@ -123,7 +121,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
         setKpis(workingKpis);
         setRisks(workingRisks);
         setActions(workingActions);
-        if (newAlerts.length > 0) setAlerts((prev) => [...newAlerts, ...prev].slice(0, 20));
+        return newAlerts;
       },
       submitCycle: (cycleId, submittedBy, nextDueDateOverride) => {
         setCycles((prev) => {
@@ -176,9 +174,6 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           prev.map((k) => (k.id === kpiId ? { ...k, ...updates, thresholdApproval: "confirmed" } : k))
         );
       },
-      dismissAlert: (alertId) => {
-        setAlerts((prev) => prev.filter((a) => a.id !== alertId));
-      },
       advanceActionStatus: (actionId) => {
         setActions((prev) =>
           prev.map((a) => {
@@ -191,7 +186,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
         );
       },
     }),
-    [kpis, cycles, risks, actions, alerts]
+    [kpis, cycles, risks, actions]
   );
 
   return <DataStoreContext.Provider value={value}>{children}</DataStoreContext.Provider>;

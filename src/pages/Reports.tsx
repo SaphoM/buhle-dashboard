@@ -1,4 +1,5 @@
 import { useDataStore } from "../data/DataStoreContext";
+import { useToast } from "../components/common/ToastContext";
 import { getStatus } from "../data/kpiEngine";
 
 function toCsv(rows: (string | number)[][]): string {
@@ -35,23 +36,33 @@ const reports = [
 
 export function Reports() {
   const { kpis, risks, actions } = useDataStore();
+  const toast = useToast();
+
+  function runExport(label: string, filename: string, rows: (string | number)[][]) {
+    try {
+      download(filename, toCsv(rows));
+      toast.success(`${label} exported successfully`);
+    } catch {
+      toast.error(`Unable to export ${label.toLowerCase()}`);
+    }
+  }
 
   function exportKpis() {
     const rows = [["KPI", "Department", "Current", "Target", "Status"]];
     kpis.forEach((k) =>
       rows.push([k.name, k.department, String(k.currentValue), String(k.target), getStatus(k)])
     );
-    download("buhle-kpi-export.csv", toCsv(rows));
+    runExport("KPIs", "buhle-kpi-export.csv", rows);
   }
   function exportRisks() {
     const rows = [["Risk", "Category", "Department", "Level", "Owner", "Status"]];
     risks.forEach((r) => rows.push([r.name, r.category, r.department, r.level, r.owner, r.status]));
-    download("buhle-risk-export.csv", toCsv(rows));
+    runExport("Risks", "buhle-risk-export.csv", rows);
   }
   function exportActions() {
     const rows = [["Action", "Owner", "Due Date", "Status"]];
     actions.forEach((a) => rows.push([a.description, a.owner, a.dueDate, a.status]));
-    download("buhle-actions-export.csv", toCsv(rows));
+    runExport("Corrective actions", "buhle-actions-export.csv", rows);
   }
 
   return (

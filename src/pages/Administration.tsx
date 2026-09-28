@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { DEMO_USERS } from "../data/demoData";
 import { useDataStore } from "../data/DataStoreContext";
 import {
@@ -12,6 +12,7 @@ import {
 } from "../data/masterData";
 import type { Department } from "../types";
 import { Tooltip } from "../components/common/Tooltip";
+import { useToast } from "../components/common/ToastContext";
 
 const APPROVAL_NOTE: Record<"confirmed" | "proposed", string> = {
   confirmed:
@@ -81,9 +82,23 @@ function MasterDataList({ title, items }: { title: string; items: MasterRecord[]
 export function Administration() {
   const { kpis, updateKpiThresholds } = useDataStore();
   const [kpiDeptFilter, setKpiDeptFilter] = useState<Department | "all">("all");
+  const toast = useToast();
+  // Threshold inputs fire onChange per keystroke (so live cross-role display
+  // stays in sync as before) but the confirmation toast should only fire
+  // once, when the user actually finishes editing a field - tracked here and
+  // fired on blur, not on every keystroke.
+  const dirtyThresholds = useRef<Set<string>>(new Set());
 
   function updateThreshold(id: string, field: "greenThreshold" | "amberThreshold" | "target", value: number) {
+    dirtyThresholds.current.add(`${id}-${field}`);
     updateKpiThresholds(id, { [field]: value });
+  }
+
+  function confirmThresholdEdit(id: string, field: string) {
+    const key = `${id}-${field}`;
+    if (!dirtyThresholds.current.has(key)) return;
+    dirtyThresholds.current.delete(key);
+    toast.success("KPI threshold updated successfully");
   }
 
   const filteredKpis = kpiDeptFilter === "all" ? kpis : kpis.filter((k) => k.department === kpiDeptFilter);
@@ -168,6 +183,7 @@ export function Administration() {
                       className="w-24 rounded-full border border-ink/10 bg-white px-3 py-1"
                       value={k.target}
                       onChange={(e) => updateThreshold(k.id, "target", Number(e.target.value))}
+                      onBlur={() => confirmThresholdEdit(k.id, "target")}
                     />
                   </td>
                   <td className="px-4 py-2">
@@ -176,6 +192,7 @@ export function Administration() {
                       className="w-24 rounded-full border border-ink/10 bg-white px-3 py-1"
                       value={k.greenThreshold}
                       onChange={(e) => updateThreshold(k.id, "greenThreshold", Number(e.target.value))}
+                      onBlur={() => confirmThresholdEdit(k.id, "greenThreshold")}
                     />
                   </td>
                   <td className="px-4 py-2">
@@ -184,6 +201,7 @@ export function Administration() {
                       className="w-24 rounded-full border border-ink/10 bg-white px-3 py-1"
                       value={k.amberThreshold}
                       onChange={(e) => updateThreshold(k.id, "amberThreshold", Number(e.target.value))}
+                      onBlur={() => confirmThresholdEdit(k.id, "amberThreshold")}
                     />
                   </td>
                 </tr>
