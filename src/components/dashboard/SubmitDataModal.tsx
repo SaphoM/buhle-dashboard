@@ -94,7 +94,7 @@ export function SubmitDataModal({
           </p>
           <button
             onClick={handleClose}
-            className="mt-2 rounded-full bg-ink px-5 py-2 text-sm font-semibold text-butter hover:bg-ink-soft"
+            className="mt-2 whitespace-nowrap rounded-full bg-ink px-7 py-2 text-sm font-semibold text-butter hover:bg-ink-soft"
           >
             Done
           </button>
