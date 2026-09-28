@@ -50,9 +50,19 @@ function MasterDataList({ title, items }: { title: string; items: MasterRecord[]
       <h3 className="mb-3 text-sm font-semibold text-ink">{title}</h3>
       <div className="flex flex-col gap-2">
         {items.map((item) => (
-          <div key={item.code} className="flex items-center justify-between gap-2 rounded-xl bg-ink/[0.03] px-3 py-2">
+          <div
+            key={item.code}
+            tabIndex={item.note ? 0 : undefined}
+            className="group relative flex items-center justify-between gap-2 rounded-xl bg-ink/[0.03] px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-butter-dark"
+          >
             <span className="text-sm text-ink-soft/80">{item.label}</span>
             <EvidenceBadge status={item.status} />
+            {item.note && (
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-64 -translate-x-1/2 rounded-2xl bg-ink px-3 py-2 text-xs leading-snug text-butter opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+                {item.note}
+                <div className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1 rotate-45 bg-ink" />
+              </div>
+            )}
           </div>
         ))}
       </div>
