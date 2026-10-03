@@ -143,6 +143,18 @@ export function BudgetsSection({
                       removeLabel={`Remove budget line ${line.budgetLine || ""}`}
                     >
                       <FinTextField label="Budget ID" value={line.budgetId} onChange={(budgetId) => update(line.id, { budgetId })} required />
+                      <FinTextField
+                        label="Financial year"
+                        value={line.financialYear}
+                        onChange={(financialYear) => update(line.id, { financialYear })}
+                        hint="e.g. 2026/27. Keeps two years in one export apart."
+                      />
+                      <FinTextField
+                        label="Period"
+                        value={line.period}
+                        onChange={(period) => update(line.id, { period })}
+                        hint="Blank means the reporting period of this submission."
+                      />
                       <FinTextField label="Budget line" value={line.budgetLine} onChange={(budgetLine) => update(line.id, { budgetLine })} required />
                       <FinTextField label="Category" value={line.category} onChange={(category) => update(line.id, { category })} />
                       <FinSelectField

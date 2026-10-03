@@ -236,6 +236,13 @@ export type BudgetStatus = "Approved" | "Revised" | "Pending Revision";
 export interface BudgetLine {
   id: string;
   budgetId: string;
+  /** The financial year the line belongs to, e.g. "2026/27". A Budget Monitor
+   *  export routinely spans two years, and merging them silently would report one
+   *  budget as though it funded the whole year. */
+  financialYear: string;
+  /** The period the figures on this line cover, e.g. "September" or "2026-09".
+   *  Blank means "the reporting period of the submission this line sits in". */
+  period: string;
   budgetLine: string;
   category: string;
   department: Department | "";
@@ -305,10 +312,21 @@ export interface DebtorRecord {
    *  "increasing debtor balance" warning in Section 17. Null when there is no
    *  prior figure - the warning is then simply not evaluated. */
   previousPeriodOutstanding: number | null;
+  /** Where the invoice stands. The outstanding balance is derived, never typed,
+   *  but Finance still records the status, because "disputed" and "written off"
+   *  are facts about the debt that an ageing total cannot express. */
+  status: ReceivableStatus | "";
   responsibleOwner: string;
   followUpDate: string;
   notes: string;
 }
+
+/**
+ * Status of an invoice, for both money owed to Buhle and money Buhle owes. The
+ * same vocabulary applies to both sides: an invoice is open, partly settled,
+ * settled, disputed or written off.
+ */
+export type ReceivableStatus = "Open" | "Partially Paid" | "Paid" | "Disputed" | "Written Off";
 
 export interface CreditorRecord {
   id: string;
@@ -322,6 +340,8 @@ export interface CreditorRecord {
   invoiceAmount: number | null;
   amountPaid: number | null;
   previousPeriodOutstanding: number | null;
+  /** Same vocabulary as debtor invoices; see ReceivableStatus. */
+  status: ReceivableStatus | "";
   paymentDate: string;
   responsibleOwner: string;
   notes: string;
@@ -351,9 +371,20 @@ export interface FinanceCreditorsData {
  * against budget is a variance question, spend against revenue is a margin
  * question - so the two are never merged.
  */
+/**
+ * Whether an expense is a direct cost of delivering the revenue it sits beside,
+ * or an overhead. Section 21 asks for gross profit "where applicable", and it is
+ * only applicable once Finance has classified its costs - so a line with no
+ * classification is counted as overhead and reported as such rather than being
+ * guessed into one.
+ */
+export type CostType = "Direct" | "Indirect" | "";
+
 export interface ExpenseLine {
   id: string;
   categoryId: string;
+  /** Feeds gross profit; see CostType. Blank means unclassified (overhead). */
+  costType: CostType;
   description: string;
   costCentre: string;
   department: Department | "";

@@ -4,6 +4,7 @@ import type { Department } from "../../types";
 import { useDataStore } from "../../data/DataStoreContext";
 import { daysUntilDue, getEffectiveStatus, getSubmissionEwsStatus } from "../../data/cycleEngine";
 import { KpiCard } from "../kpi/KpiCard";
+import { FinanceHealthSummary } from "./finance/FinanceHealthSummary";
 import { StatusBadge } from "../kpi/StatusBadge";
 import { CircularRing } from "../kpi/CircularRing";
 import { MiniBarTrend } from "../kpi/MiniBarTrend";
@@ -209,6 +210,11 @@ export function DepartmentDashboard({
           </div>
         </>
       )}
+
+      {/* Sections 23 and 38: Finance states its own headline position and data
+          quality, because the generic KPI grid below cannot distinguish a good
+          result from a result nobody has reported yet. */}
+      {department === "Finance" && <FinanceHealthSummary />}
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">Key Performance Indicators</h2>

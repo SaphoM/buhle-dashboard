@@ -19,7 +19,7 @@ import { AgeingPanel } from "./AgeingPanel";
 import type { Department, Kpi } from "../../../types";
 import type { CreditorRecord, FinanceConfig, FinanceCreditorsData, FinanceReport } from "../../../types/finance";
 import { FINANCE_KPI_IDS, calculateCreditors, daysOverdue, formatCurrency } from "../../../data/financeEngine";
-import { blankCreditorRecord } from "../../../data/financeSeed";
+import { RECEIVABLE_STATUSES, blankCreditorRecord } from "../../../data/financeSeed";
 
 /**
  * Section 18 - Creditors.
@@ -110,6 +110,13 @@ export function CreditorsSection({
                         hint="Needed to detect a growing balance."
                       />
                       <FinTextField label="Payment date" type="date" value={record.paymentDate} onChange={(paymentDate) => update(record.id, { paymentDate })} hint="Optional." />
+                      <FinSelectField
+                        label="Status"
+                        value={record.status}
+                        options={RECEIVABLE_STATUSES.map((s) => ({ value: s, label: s }))}
+                        onChange={(status) => update(record.id, { status })}
+                        placeholder="Not stated"
+                      />
                       <FinTextField label="Responsible owner" value={record.responsibleOwner} onChange={(responsibleOwner) => update(record.id, { responsibleOwner })} />
                       <FinTextField label="Notes" value={record.notes} onChange={(notes) => update(record.id, { notes })} />
                       <div className="sm:col-span-2 lg:col-span-4">

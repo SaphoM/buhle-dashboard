@@ -311,6 +311,48 @@ describe("Finance Data Submission", () => {
   });
 
   // Test 4 - a section that does not apply is recorded as such, not as zero.
+  // Test 10 - the confirmation is announced, not only drawn (Section 36).
+  it("announces a successful submission and counts the warnings out loud", async () => {
+    renderModal();
+    await fillMinimumValidReport({ revenueActual: 300000 });
+    await setMonthlyThresholds();
+
+    await goToReview();
+    await user.click(screen.getByRole("button", { name: /^Submit Finance Data$/ }));
+
+    // Revenue of 300000 lands below its amber threshold, and the lower revenue
+    // drags the surplus below its own, so the submission succeeds with warnings
+    // rather than failing. The toast names the count it will raise, matching the
+    // review preview the manager just approved.
+    await waitFor(() => expect(screen.getByText(/Finance submission recorded/)).toBeTruthy());
+    expect(screen.getByText("Finance submission saved with 2 warnings detected")).toBeTruthy();
+  });
+
+  it("confirms a clean submission without inventing a warning", async () => {
+    renderModal();
+    await fillMinimumValidReport();
+    await setMonthlyThresholds();
+
+    await goToReview();
+    await user.click(screen.getByRole("button", { name: /^Submit Finance Data$/ }));
+
+    await waitFor(() => expect(screen.getByText(/Finance submission recorded/)).toBeTruthy());
+    expect(screen.getByText("Finance submission saved successfully")).toBeTruthy();
+  });
+
+  it("says so when a submission is refused, rather than closing in silence", async () => {
+    renderModal();
+
+    await goToSection(/^Profitability/);
+    await user.click(await screen.findByRole("button", { name: /Review Submission/ }));
+    await waitFor(() => expect(screen.getByText(/Your Finance submission is incomplete/)).toBeTruthy());
+
+    // A blocked submission leaves no trace in the store, and says why on screen
+    // rather than letting the dialog close as though something had saved.
+    expect(screen.getByText(/Finance submission could not be completed/)).toBeTruthy();
+    expect(currentStore.financeReports).toHaveLength(0);
+  });
+
   it("records a section marked Not Applicable without inventing figures", async () => {
     renderModal();
     await fillMinimumValidReport();

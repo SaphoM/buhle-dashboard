@@ -49,6 +49,19 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
 ] as const;
 
 /**
+ * Invoice status vocabulary shared by debtors and creditors (Sections 15 and 18).
+ * One list, because the same invoice is described the same way whichever side of
+ * the ledger it sits on, and two lists would drift apart.
+ */
+export const RECEIVABLE_STATUSES = [
+  "Open",
+  "Partially Paid",
+  "Paid",
+  "Disputed",
+  "Written Off",
+] as const;
+
+/**
  * Monthly is the proposed default cadence (Section 4), held in config rather
  * than hard-coded into the cycle logic so an administrator can change it and the
  * next-due-date calculation follows.
@@ -92,6 +105,7 @@ export function blankExpenseLine(categoryId: string): ExpenseLine {
   return {
     id: newId("exp"),
     categoryId,
+    costType: "",
     description: "",
     costCentre: "",
     department: "",
@@ -108,6 +122,8 @@ export function blankBudgetLine(): BudgetLine {
   return {
     id: newId("bud"),
     budgetId: "",
+    financialYear: "",
+    period: "",
     budgetLine: "",
     category: "",
     department: "",
@@ -137,6 +153,7 @@ export function blankDebtorRecord(): DebtorRecord {
     invoiceAmount: null,
     amountReceived: null,
     previousPeriodOutstanding: null,
+    status: "",
     responsibleOwner: "",
     followUpDate: "",
     notes: "",
@@ -156,6 +173,7 @@ export function blankCreditorRecord(): CreditorRecord {
     invoiceAmount: null,
     amountPaid: null,
     previousPeriodOutstanding: null,
+    status: "",
     paymentDate: "",
     responsibleOwner: "",
     notes: "",
@@ -457,6 +475,26 @@ export const FINANCE_SUBMISSION_KPIS: Kpi[] = [
     dataAvailable: false,
     insight:
       "Core-operations surplus (transfers excluded) as a share of core-operations revenue, per Section 21. No approved margin target has been set yet.",
+    sourceSystem: "Finance submission - revenue and expense records",
+    thresholdApproval: "proposed",
+  },
+  {
+    id: "kpi-gross-margin",
+    name: "Gross Margin",
+    department: FINANCE_DEPARTMENT,
+    unit: "percent",
+    currentValue: 0,
+    previousValue: 0,
+    target: 0,
+    greenThreshold: null,
+    amberThreshold: null,
+    lowerIsBetter: false,
+    history: [],
+    measurementFrequency: "monthly",
+    owner: "Finance Manager",
+    dataAvailable: false,
+    insight:
+      "Revenue less the costs Finance classified as direct, as a share of revenue (Section 21). Reported only once at least one expense line has been classified as a direct cost. No approved gross margin target has been set yet.",
     sourceSystem: "Finance submission - revenue and expense records",
     thresholdApproval: "proposed",
   },

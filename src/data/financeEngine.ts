@@ -557,6 +557,17 @@ export interface ProfitabilitySummary {
   /** Expenses expressed as a share of revenue. This is the "core operations"
    *  cost ratio Section 21 pairs with the operating margin. */
   costRatioPct: number | null;
+  /** Expenses Finance classified as a direct cost of delivering the revenue,
+   *  transfers excluded. Null when no line has been classified. */
+  directExpenses: number | null;
+  /** Everything else: administration, premises, support. */
+  indirectExpenses: number | null;
+  /** Revenue less direct costs. Null until Finance classifies at least one
+   *  expense as direct - an unclassified cost structure cannot produce a gross
+   *  figure, and guessing one would put a number in front of executives that
+   *  nobody in Finance approved (Section 21). */
+  grossProfit: number | null;
+  grossMarginPct: number | null;
   budgetedRevenue: number | null;
   budgetedExpenses: number | null;
   budgetedSurplus: number | null;
@@ -594,6 +605,18 @@ export function calculateProfitability(
   const expenseValue = sumOrNull(expenseLines.map((l) => l.actual));
   if (revenueValue === null && expenseValue === null) return null;
 
+  // Section 21: gross profit is only meaningful once costs are classified as
+  // direct or indirect. Unclassified lines are counted as indirect (overhead)
+  // and reported as such, so nothing is silently promoted into a direct cost.
+  const directExpenses = sumOrNull(
+    expenseLines.filter((l) => l.costType === "Direct").map((l) => l.actual)
+  );
+  const indirectExpenses = sumOrNull(
+    expenseLines.filter((l) => l.costType !== "Direct").map((l) => l.actual)
+  );
+  const grossProfit =
+    revenueValue === null || directExpenses === null ? null : revenueValue - directExpenses;
+
   const budgetedRevenue = sumOrNull(revenueLines.map((l) => l.budget));
   const budgetedExpenses = sumOrNull(expenseLines.map((l) => l.budget));
 
@@ -618,6 +641,13 @@ export function calculateProfitability(
     costRatioPct:
       expenseValue !== null && revenueValue !== null && revenueValue !== 0
         ? round((expenseValue / revenueValue) * 100, 1)
+        : null,
+    directExpenses,
+    indirectExpenses,
+    grossProfit,
+    grossMarginPct:
+      grossProfit !== null && revenueValue !== null && revenueValue !== 0
+        ? round((grossProfit / revenueValue) * 100, 1)
         : null,
     budgetedRevenue,
     budgetedExpenses,
@@ -674,6 +704,7 @@ export const FINANCE_KPI_IDS = {
   creditorsTotal: "kpi-creditors-total",
   creditors90Plus: "kpi-creditors-90plus",
   operatingMargin: "kpi-operating-margin",
+  grossMargin: "kpi-gross-margin",
 } as const;
 
 /**
@@ -724,6 +755,10 @@ export function computeFinanceKpis(
   push(FINANCE_KPI_IDS.creditorsTotal, creditors?.totalOutstanding ?? null);
   push(FINANCE_KPI_IDS.creditors90Plus, creditors?.severeOverdue ?? null);
   push(FINANCE_KPI_IDS.operatingMargin, profitability?.operatingMarginPct ?? null);
+  // Section 21 asks for gross margin "where applicable". It is only applicable
+  // once Finance has classified direct costs, so this stays null - and reports as
+  // no data - until then, rather than being derived from an assumed split.
+  push(FINANCE_KPI_IDS.grossMargin, profitability?.grossMarginPct ?? null);
 
   const nameOf = (id: string) => kpis.find((k) => k.id === id)?.name ?? id;
   for (const kpiId of Object.values(FINANCE_KPI_IDS)) {
@@ -760,6 +795,7 @@ export function sectionForKpi(kpiId: string): string {
       return "Creditors";
     case FINANCE_KPI_IDS.operatingSurplus:
     case FINANCE_KPI_IDS.operatingMargin:
+    case FINANCE_KPI_IDS.grossMargin:
       return "Profitability";
     default:
       return "Finance";

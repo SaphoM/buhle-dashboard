@@ -4,6 +4,7 @@
 import readXlsxFile from "read-excel-file/browser";
 import {
   DEFAULT_REVENUE_CATEGORIES,
+  type BudgetStatus,
   type BudgetLine,
   type CreditorRecord,
   type DebtorRecord,
@@ -11,6 +12,7 @@ import {
   type FinanceReport,
   type FinanceSectionKey,
   type ImportRun,
+  type ReceivableStatus,
   type RevenueLine,
 } from "../types/finance";
 import {
@@ -98,6 +100,18 @@ export interface FieldSpec {
 
 const DATE_ALIASES = ["date", "due date", "invoice date", "posting date", "transaction date"];
 
+/** The accepted enum values, taken from the domain vocabulary rather than
+ *  restated here, so an imported value and a typed value cannot diverge. */
+const BUDGET_STATUS_VALUES: readonly BudgetStatus[] = ["Approved", "Revised", "Pending Revision"];
+const RECEIVABLE_STATUS_VALUES: readonly ReceivableStatus[] = [
+  "Open",
+  "Partially Paid",
+  "Paid",
+  "Disputed",
+  "Written Off",
+];
+const COST_TYPE_VALUES: readonly ("Direct" | "Indirect")[] = ["Direct", "Indirect"];
+
 export const REVENUE_FIELDS: FieldSpec[] = [
   { key: "description", label: "Revenue description", kind: "text", aliases: ["description", "details", "narrative", "item", "revenue description", "line"] },
   { key: "counterparty", label: "Customer / funder / partner", kind: "text", aliases: ["customer", "funder", "partner", "donor", "client", "counterparty"] },
@@ -115,6 +129,8 @@ export const REVENUE_FIELDS: FieldSpec[] = [
 
 export const BUDGET_FIELDS: FieldSpec[] = [
   { key: "budgetId", label: "Budget ID", kind: "text", required: true, aliases: ["budget id", "budgetid", "budget code", "code", "id", "line id"] },
+  { key: "financialYear", label: "Financial year", kind: "text", aliases: ["financial year", "fin year", "fy", "year", "financialyear"] },
+  { key: "period", label: "Period", kind: "text", aliases: ["period", "month", "reporting period", "period covered", "month covered"] },
   { key: "budgetLine", label: "Budget line", kind: "text", required: true, aliases: ["budget line", "line", "line description", "budget line name", "item", "account"] },
   { key: "category", label: "Budget category", kind: "text", aliases: ["category", "budget category", "expense type", "type"] },
   { key: "department", label: "Department", kind: "text", aliases: ["department", "dept", "cost centre owner"] },
@@ -126,6 +142,7 @@ export const BUDGET_FIELDS: FieldSpec[] = [
   { key: "actualExpenditure", label: "Actual expenditure", kind: "currency", required: true, aliases: ["actual", "actuals", "actual expenditure", "spent", "actual spend", "ytd actual"] },
   { key: "committedExpenditure", label: "Committed expenditure", kind: "currency", aliases: ["committed", "commitments", "committed expenditure", "po", "orders"] },
   { key: "forecastExpenditure", label: "Forecast expenditure", kind: "currency", aliases: ["forecast", "forecast expenditure", "expected", "projection"] },
+  { key: "status", label: "Budget status", kind: "enum", options: BUDGET_STATUS_VALUES, aliases: ["status", "budget status", "line status", "approval status"] },
   { key: "notes", label: "Notes", kind: "text", aliases: ["notes", "note", "comment"] },
 ];
 
@@ -139,6 +156,7 @@ export const DEBTOR_FIELDS: FieldSpec[] = [
   { key: "project", label: "Project / course", kind: "text", aliases: ["project", "course", "programme", "service"] },
   { key: "invoiceAmount", label: "Invoice amount", kind: "currency", required: true, aliases: ["invoice amount", "amount", "value", "total", "debt", "outstanding", "balance"] },
   { key: "amountReceived", label: "Amount received", kind: "currency", aliases: ["received", "amount received", "paid", "payment", "settled"] },
+  { key: "status", label: "Status", kind: "enum", options: RECEIVABLE_STATUS_VALUES, aliases: ["status", "invoice status", "payment status", "state"] },
   { key: "responsibleOwner", label: "Responsible owner", kind: "text", aliases: ["owner", "responsible", "responsible owner", "account manager", "contact"] },
   { key: "followUpDate", label: "Follow-up date", kind: "text", aliases: ["follow up", "follow-up", "follow up date", "next action"] },
   { key: "notes", label: "Notes", kind: "text", aliases: ["notes", "note", "comment"] },
@@ -154,6 +172,7 @@ export const CREDITOR_FIELDS: FieldSpec[] = [
   { key: "project", label: "Project", kind: "text", aliases: ["project", "programme", "program"] },
   { key: "invoiceAmount", label: "Invoice amount", kind: "currency", required: true, aliases: ["invoice amount", "amount", "value", "total", "balance"] },
   { key: "amountPaid", label: "Amount paid", kind: "currency", aliases: ["paid", "amount paid", "payment", "settled"] },
+  { key: "status", label: "Status", kind: "enum", options: RECEIVABLE_STATUS_VALUES, aliases: ["status", "invoice status", "payment status", "state"] },
   { key: "paymentDate", label: "Payment date", kind: "text", aliases: ["payment date", "paid date", "date paid"] },
   { key: "responsibleOwner", label: "Responsible owner", kind: "text", aliases: ["owner", "responsible", "responsible owner", "contact"] },
   { key: "notes", label: "Notes", kind: "text", aliases: ["notes", "note", "comment"] },
@@ -161,6 +180,7 @@ export const CREDITOR_FIELDS: FieldSpec[] = [
 
 export const EXPENSE_FIELDS: FieldSpec[] = [
   { key: "description", label: "Expense description", kind: "text", aliases: ["description", "details", "narrative", "item", "expense description", "line"] },
+  { key: "costType", label: "Cost type", kind: "enum", options: COST_TYPE_VALUES, aliases: ["cost type", "direct/indirect", "direct or indirect", "nature of cost", "cost nature"] },
   { key: "costCentre", label: "Cost centre", kind: "text", aliases: ["cost centre", "costcenter", "cc"] },
   { key: "department", label: "Department", kind: "text", aliases: ["department", "dept"] },
   { key: "project", label: "Project", kind: "text", aliases: ["project", "programme", "program"] },
@@ -386,7 +406,13 @@ export function buildPreview(
       if (isBlankCell(raw)) continue;
 
       const parsed = coerce(raw, field, options);
-      if (typeof parsed === "string" && field.kind !== "text" && field.kind !== "category" && field.kind !== "enum") {
+      // A string is a valid result for the kinds whose value IS text: prose
+      // fields, categories, enum labels and normalised dates. For the numeric
+      // kinds it can only mean the cell could not be read, because coerce
+      // returns a number or an error for those.
+      const returnsText =
+        field.kind === "text" || field.kind === "category" || field.kind === "enum" || field.kind === "date";
+      if (typeof parsed === "string" && !returnsText) {
         issues.push({ rowNumber: i + 2, field: field.label, message: `"${String(raw).trim()}" is not a valid ${field.kind}` });
         continue;
       }
@@ -450,7 +476,13 @@ function coerce(
       return parsed;
     }
     case "date": {
-      return parseDate(text);
+      // A date parse succeeds by returning a string, so the failure has to be
+      // signalled explicitly. Returning null here would hand the caller an empty
+      // cell and drop the row's only clue that the workbook held something
+      // unreadable in that column.
+      const parsed = parseDate(text);
+      if (parsed === null) return { error: `"${text}" is not a readable date` };
+      return parsed;
     }
     case "boolean": {
       return /^(y|yes|true|1)$/i.test(text);
@@ -469,6 +501,18 @@ function coerce(
         return { error: `"${text}" is not an approved expense category - map it or add it in Administration` };
       }
       return text;
+    }
+    case "enum": {
+      const accepted = field.options ?? [];
+      if (accepted.length === 0) return text;
+      const match = accepted.find((o) => o.toLowerCase() === text.toLowerCase());
+      if (match) return match;
+      // An unrecognised status is rejected rather than stored verbatim: a record
+      // claiming to be "Pmts Rcvd" would look like a real status in the ageing
+      // report while meaning nothing to anyone reading it.
+      return {
+        error: `"${text}" is not one of ${accepted.join(", ")} - correct the column or the value`,
+      };
     }
     default:
       return text;

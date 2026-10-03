@@ -19,7 +19,7 @@ import { AgeingPanel } from "./AgeingPanel";
 import type { Department, Kpi } from "../../../types";
 import type { DebtorRecord, FinanceConfig, FinanceDebtorsData, FinanceReport } from "../../../types/finance";
 import { FINANCE_KPI_IDS, calculateDebtors, daysOverdue, formatCurrency } from "../../../data/financeEngine";
-import { blankDebtorRecord } from "../../../data/financeSeed";
+import { RECEIVABLE_STATUSES, blankDebtorRecord } from "../../../data/financeSeed";
 
 /**
  * Section 15 - Debtors.
@@ -107,6 +107,13 @@ export function DebtorsSection({
                         onChange={(previousPeriodOutstanding) => update(record.id, { previousPeriodOutstanding })}
                         prefix={config.currencySymbol}
                         hint="Needed to detect a growing balance."
+                      />
+                      <FinSelectField
+                        label="Status"
+                        value={record.status}
+                        options={RECEIVABLE_STATUSES.map((s) => ({ value: s, label: s }))}
+                        onChange={(status) => update(record.id, { status })}
+                        placeholder="Not stated"
                       />
                       <FinTextField label="Responsible owner" value={record.responsibleOwner} onChange={(responsibleOwner) => update(record.id, { responsibleOwner })} />
                       <FinTextField label="Follow-up date" type="date" value={record.followUpDate} onChange={(followUpDate) => update(record.id, { followUpDate })} />

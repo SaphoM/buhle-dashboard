@@ -181,6 +181,7 @@ function validateBudgets(report: FinanceReport): ValidationIssue[] {
   }
 
   const seen = new Set<string>();
+  const years = new Set<string>();
   b.lines.forEach((line, i) => {
     const label = `Budget line ${i + 1}`;
     if (isBlank(line.budgetId)) issues.push(missing("budgets", `${label} - Budget ID`));
@@ -204,6 +205,12 @@ function validateBudgets(report: FinanceReport): ValidationIssue[] {
     }
 
     const budget = line.revisedBudget ?? line.approvedBudget;
+    // Section 12: a Budget Monitor export routinely spans two financial years.
+    // If only some lines name their year, the untagged ones may belong to either,
+    // and the utilisation figure would blend them. Flagged, not blocked: the
+    // submission is still Finance's to interpret.
+    if (!isBlank(line.financialYear)) years.add(line.financialYear.trim().toLowerCase());
+
     // Actual + committed above the budget in force is a real overspend, which
     // is exactly what the EWS is meant to surface - not a data-entry error.
     // So it is reported as context, not blocked here.
@@ -220,6 +227,25 @@ function validateBudgets(report: FinanceReport): ValidationIssue[] {
       );
     }
   });
+
+  if (years.size > 1) {
+    issues.push(
+      inconsistent(
+        "budgets",
+        "Financial year",
+        `Budget lines span more than one financial year (${[...years].join(", ")}). Utilisation would blend years - submit one year at a time or tag every line.`
+      )
+    );
+  }
+  if (years.size > 0 && years.size < b.lines.length) {
+    issues.push(
+      inconsistent(
+        "budgets",
+        "Financial year",
+        `Only ${years.size} of ${b.lines.length} budget lines state a financial year. Untagged lines are counted in the same utilisation figure.`
+      )
+    );
+  }
 
   return issues;
 }
@@ -278,6 +304,22 @@ function validateDebtors(report: FinanceReport, today: Date): ValidationIssue[] 
           `Amount received (${rec.amountReceived}) exceeds the invoice amount (${rec.invoiceAmount})`
         )
       );
+    }
+
+    // Section 15: status and figures have to agree. An invoice marked Paid is
+    // reported as collected by the collection rate while the ageing table still
+    // shows it outstanding, and nobody can tell which figure to believe.
+    if (rec.status === "Paid" && rec.invoiceAmount !== null && rec.amountReceived !== null) {
+      const outstanding = rec.invoiceAmount - rec.amountReceived;
+      if (outstanding > 1) {
+        issues.push(
+          inconsistent(
+            "debtors",
+            `${label} - Status`,
+            `Marked Paid but ${Math.round(outstanding)} still outstanding`
+          )
+        );
+      }
     }
 
     // A follow-up date in the past on an unpaid invoice is worth surfacing but
@@ -346,6 +388,22 @@ function validateCreditors(report: FinanceReport): ValidationIssue[] {
           `Amount paid (${rec.amountPaid}) exceeds the invoice amount (${rec.invoiceAmount})`
         )
       );
+    }
+
+    // Section 18: same agreement rule as debtors. A creditor invoice marked Paid
+    // is excluded from the overdue position, so a leftover balance would quietly
+    // disappear from the ageing report.
+    if (rec.status === "Paid" && rec.invoiceAmount !== null && rec.amountPaid !== null) {
+      const outstanding = rec.invoiceAmount - rec.amountPaid;
+      if (outstanding > 1) {
+        issues.push(
+          inconsistent(
+            "creditors",
+            `${label} - Status`,
+            `Marked Paid but ${Math.round(outstanding)} still outstanding`
+          )
+        );
+      }
     }
   });
 

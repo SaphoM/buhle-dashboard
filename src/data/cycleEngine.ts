@@ -137,6 +137,29 @@ export function deriveNextReportingPeriod(cycle: DataCollectionCycle, nextDueIso
   }
 }
 
+/**
+ * The Finance cycle a submission is being written against: the soonest-due cycle
+ * that is still open.
+ *
+ * "Open" excludes everything already finished (Accepted, Closed), everything
+ * submitted (Submitted) and everything bounced back for rework (Validation
+ * Required) - a report being corrected is a different cycle's problem, and
+ * attaching the next period's figures to it would misstate both. The Finance
+ * dashboard and the submission modal both resolve their cycle through here, so
+ * the figures a manager reads and the figures Finance is editing cannot come
+ * from two different cycles.
+ */
+export function getOpenFinanceCycle(
+  cycles: DataCollectionCycle[],
+  now: Date = new Date()
+): DataCollectionCycle | undefined {
+  return cycles
+    .filter((c) => c.department === "Finance")
+    .filter((c) => !["Accepted", "Closed"].includes(getEffectiveStatus(c, now)))
+    .filter((c) => !["Submitted", "Validation Required"].includes(getEffectiveStatus(c, now)))
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+}
+
 export const cycleStatusMeaning: Record<CycleStatus, string> = {
   Upcoming: "Not yet open for entry.",
   Open: "Open for entry - not yet started.",

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  BUDGET_FIELDS,
+  DEBTOR_FIELDS,
+  EXPENSE_FIELDS,
   REVENUE_FIELDS,
   applyImport,
   buildPreview,
@@ -143,6 +146,113 @@ describe("buildPreview (Sections 26, 33)", () => {
     expect(preview.unmappedFields).toEqual(["Revenue category"]);
     expect(preview.acceptable).toHaveLength(0);
     expect(preview.rejected.every((r) => r.issues.some((i) => i.message.includes("not mapped")))).toBe(true);
+  });
+});
+
+describe("the fields a Budget Monitor export can populate (Sections 12, 15, 18, 21)", () => {
+  it("maps the financial year and period the workbook states, and the budget status", () => {
+    const source = sheet(
+      ["Budget ID", "Budget line", "Financial Year", "Period", "Approved", "Actual", "Status"],
+      [["B-01", "Marketing", "2026/27", "September 2026", "100000", "60000", "Approved"]],
+      "Budgets"
+    );
+    const preview = buildPreview(source, "budgets", {
+      budgetId: "Budget ID",
+      budgetLine: "Budget line",
+      financialYear: "Financial Year",
+      period: "Period",
+      approvedBudget: "Approved",
+      actualExpenditure: "Actual",
+      status: "Status",
+    });
+
+    expect(preview.rejected).toHaveLength(0);
+    expect(preview.acceptable[0].values).toMatchObject({
+      financialYear: "2026/27",
+      period: "September 2026",
+      status: "Approved",
+    });
+  });
+
+  it("suggests the new columns from the header names a workbook would use", () => {
+    const { mapping } = suggestMapping(["Budget ID", "Budget line", "FY", "Month", "Actual", "Status"], BUDGET_FIELDS);
+    expect(mapping.financialYear).toBe("FY");
+    expect(mapping.period).toBe("Month");
+    expect(mapping.status).toBe("Status");
+  });
+
+  it("carries an invoice status from a debtor sheet", () => {
+    const source = sheet(
+      ["Customer", "Invoice", "Due Date", "Amount", "Status"],
+      [["Acme", "INV-1", "2026-09-30", "50000", "Partially Paid"]],
+      "Debtors"
+    );
+    const preview = buildPreview(source, "debtors", {
+      customer: "Customer",
+      invoiceNumber: "Invoice",
+      dueDate: "Due Date",
+      invoiceAmount: "Amount",
+      status: "Status",
+    });
+
+    expect(preview.rejected).toHaveLength(0);
+    expect(preview.acceptable[0].values.status).toBe("Partially Paid");
+  });
+
+  it("rejects a status it cannot interpret instead of storing the cell verbatim", () => {
+    // "Pmts Rcvd" is not a status. Storing it would put a value in the record
+    // that looks like a status to a reader and means nothing to the ageing logic.
+    const source = sheet(
+      ["Customer", "Invoice", "Due Date", "Amount", "Status"],
+      [["Acme", "INV-1", "2026-09-30", "50000", "Pmts Rcvd"]],
+      "Debtors"
+    );
+    const preview = buildPreview(source, "debtors", {
+      customer: "Customer",
+      invoiceNumber: "Invoice",
+      dueDate: "Due Date",
+      invoiceAmount: "Amount",
+      status: "Status",
+    });
+
+    expect(preview.acceptable).toHaveLength(0);
+    expect(preview.rejected[0].issues[0].message).toContain("not one of");
+  });
+
+  it("imports a readable date column and rejects an unreadable one", () => {
+    // The two halves of one rule: a date that parses must survive, and a date
+    // that does not must be reported rather than landing in the record as an
+    // empty due date.
+    const headers = ["Customer", "Invoice", "Due Date", "Amount"];
+    const source = sheet(headers, [["Acme", "INV-1", "30/09/2026", "50000"], ["Globex", "INV-2", "sometime soon", "20000"]]);
+    const mapping = { customer: "Customer", invoiceNumber: "Invoice", dueDate: "Due Date", invoiceAmount: "Amount" };
+
+    const preview = buildPreview(source, "debtors", mapping);
+
+    expect(preview.acceptable).toHaveLength(1);
+    expect(preview.acceptable[0].values.dueDate).toBe("2026-09-30");
+    expect(preview.rejected[0].issues[0].message).toContain("not a readable date");
+  });
+
+  it("carries a direct/indirect cost classification from a workbook", () => {
+    const source = sheet(
+      ["Description", "Category", "Actual", "Cost type"],
+      [["Facilitator fees", "Operating expenses", "180000", "Direct"]],
+      "Expenses"
+    );
+    const preview = buildPreview(source, "profitability", {
+      description: "Description",
+      categoryId: "Category",
+      actual: "Actual",
+      costType: "Cost type",
+    });
+
+    expect(preview.rejected).toHaveLength(0);
+    expect(preview.acceptable[0].values.costType).toBe("Direct");
+    expect(suggestMapping(["Description", "Category", "Actual", "Cost type"], EXPENSE_FIELDS).mapping.costType).toBe(
+      "Cost type"
+    );
+    expect(suggestMapping(["Customer", "Status"], DEBTOR_FIELDS).mapping.status).toBe("Status");
   });
 });
 

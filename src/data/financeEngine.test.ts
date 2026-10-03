@@ -47,6 +47,7 @@ function expense(patch: Partial<ExpenseLine> = {}): ExpenseLine {
   return {
     id: `exp-${Math.random().toString(36).slice(2, 8)}`,
     categoryId: "Operating expenses",
+    costType: "",
     description: "Test expense",
     costCentre: "",
     department: "",
@@ -163,6 +164,46 @@ describe("calculateProfitability (Section 21)", () => {
     expect(summary!.complete).toBe(false);
   });
 
+  it("derives gross profit only from costs Finance classified as direct (Section 21)", () => {
+    const summary = calculateProfitability(revenue([revenueLine({ actual: 500000 })]), {
+      expenses: [
+        expense({ actual: 180000, costType: "Direct" }),
+        expense({ actual: 120000, costType: "Direct" }),
+        expense({ categoryId: "Payroll", actual: 200000, costType: "Indirect" }),
+        expense({ categoryId: "Operating expenses", actual: 50000, costType: "Indirect", isTransfer: true }),
+      ],
+      commentary: "",
+      notApplicable: false,
+    });
+
+    // Gross profit uses the 300000 of direct cost only. The 200000 overhead and
+    // the 50000 transfer belong to the operating result, not to gross profit.
+    expect(summary!.directExpenses).toBe(300000);
+    expect(summary!.indirectExpenses).toBe(200000);
+    expect(summary!.grossProfit).toBe(200000);
+    expect(summary!.grossMarginPct).toBe(40);
+    // The operating result is unchanged by the classification.
+    expect(summary!.operatingExpenses).toBe(500000);
+    expect(summary!.operatingSurplus).toBe(0);
+  });
+
+  it("reports no gross profit while no expense line is classified, and does not guess one", () => {
+    const summary = calculateProfitability(revenue([revenueLine({ actual: 500000 })]), {
+      expenses: [expense({ actual: 200000 }), expense({ categoryId: "Payroll", actual: 150000 })],
+      commentary: "",
+      notApplicable: false,
+    });
+
+    // Section 21 asks for gross profit "where applicable". Until Finance has
+    // classified a direct cost it is not applicable, and an assumed split would
+    // publish a gross figure nobody approved.
+    expect(summary!.directExpenses).toBeNull();
+    expect(summary!.grossProfit).toBeNull();
+    expect(summary!.grossMarginPct).toBeNull();
+    expect(summary!.indirectExpenses).toBe(350000);
+    expect(summary!.operatingSurplus).toBe(150000);
+  });
+
   it("leaves the margin undefined when there is no revenue to divide by", () => {
     const summary = calculateProfitability(revenue([]), {
       expenses: [expense({ actual: 10000 })],
@@ -184,6 +225,8 @@ describe("calculateBudgets (Sections 12, 13)", () => {
       {
         id: "b1",
         budgetId: "B-01",
+        financialYear: "2026/27",
+        period: "September 2026",
         budgetLine: "Marketing",
         category: "",
         department: "",
@@ -201,6 +244,8 @@ describe("calculateBudgets (Sections 12, 13)", () => {
       {
         id: "b2",
         budgetId: "B-02",
+        financialYear: "2026/27",
+        period: "September 2026",
         budgetLine: "Fleet",
         category: "",
         department: "",
@@ -278,6 +323,7 @@ describe("calculateDebtors (Sections 15-17)", () => {
         invoiceAmount: 50000,
         amountReceived: 10000,
         previousPeriodOutstanding: 50000,
+        status: "Open",
         responsibleOwner: "",
         followUpDate: "",
         notes: "",
@@ -294,6 +340,7 @@ describe("calculateDebtors (Sections 15-17)", () => {
         invoiceAmount: 30000,
         amountReceived: 0,
         previousPeriodOutstanding: 10000,
+        status: "Open",
         responsibleOwner: "",
         followUpDate: "",
         notes: "",

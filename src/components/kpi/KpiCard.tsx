@@ -6,6 +6,20 @@ import { Link } from "react-router-dom";
 
 const trendArrow = { up: "▲", down: "▼", flat: "→" };
 
+/** Last-updated stamps are rendered as date and time, not a bare date: a KPI
+ *  refreshed this morning must not look identical to one last touched in March. */
+function formatTimestamp(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function KpiCard({ kpi, linkTo }: { kpi: Kpi; linkTo?: string }) {
   const status = getStatus(kpi);
   const trend = getTrend(kpi);
@@ -74,10 +88,15 @@ export function KpiCard({ kpi, linkTo }: { kpi: Kpi; linkTo?: string }) {
         </>
       )}
 
-      {kpi.sourceSystem && (
-        <p className="mt-2 truncate text-[10px] text-ink-soft/30" title={kpi.sourceSystem}>
-          Source: {kpi.sourceSystem}
-        </p>
+      {/* Sections 29 and 38: every KPI states where it came from and when it
+          was last updated, so a figure nobody has refreshed is obvious on the
+          card rather than only in a provenance record nobody opens. */}
+      {(kpi.sourceSystem || kpi.lastUpdated) && (
+      <p className="mt-2 truncate text-[10px] text-ink-soft/30" title={kpi.sourceSystem}>
+        {kpi.sourceSystem ? `Source: ${kpi.sourceSystem}` : null}
+        {kpi.sourceSystem && kpi.lastUpdated ? " · " : null}
+        {kpi.lastUpdated ? `Updated: ${formatTimestamp(kpi.lastUpdated)}` : null}
+      </p>
       )}
     </div>
   );

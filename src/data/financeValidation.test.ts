@@ -70,6 +70,8 @@ function validReport(): FinanceReport {
         {
           id: "b1",
           budgetId: "B-01",
+          financialYear: "2026/27",
+          period: "September 2026",
           budgetLine: "Marketing",
           category: "",
           department: "",
@@ -101,6 +103,7 @@ function validReport(): FinanceReport {
           invoiceAmount: 50000,
           amountReceived: 0,
           previousPeriodOutstanding: null,
+          status: "Open",
           responsibleOwner: "",
           followUpDate: "",
           notes: "",
@@ -122,6 +125,7 @@ function validReport(): FinanceReport {
           invoiceAmount: 30000,
           amountPaid: 0,
           previousPeriodOutstanding: null,
+          status: "Open",
           paymentDate: "",
           responsibleOwner: "",
           notes: "",
@@ -134,6 +138,7 @@ function validReport(): FinanceReport {
         {
           id: "e1",
           categoryId: "Operating expenses",
+          costType: "",
           description: "Supplies",
           costCentre: "",
           department: "",
@@ -222,6 +227,92 @@ describe("validateFinanceReport", () => {
       options()
     );
     expect(result.issues.some((i) => i.field.includes("Amount received"))).toBe(true);
+  });
+
+  it("rejects an invoice marked Paid while money is still outstanding (Section 15)", () => {
+    const base = validReport();
+    const result = validateFinanceReport(
+      {
+        ...base,
+        debtors: {
+          ...base.debtors,
+          records: [
+            { ...base.debtors.records[0], invoiceAmount: 50000, amountReceived: 20000, status: "Paid" },
+          ],
+        },
+      },
+      options()
+    );
+    // The collection rate would count this as collected while the ageing table
+    // still showed 30000 outstanding, so the two figures cannot both stand.
+    expect(result.issues.some((i) => i.message.includes("Marked Paid"))).toBe(true);
+  });
+
+  it("accepts a fully settled invoice marked Paid", () => {
+    const base = validReport();
+    const result = validateFinanceReport(
+      {
+        ...base,
+        debtors: {
+          ...base.debtors,
+          records: [
+            { ...base.debtors.records[0], invoiceAmount: 50000, amountReceived: 50000, status: "Paid" },
+          ],
+        },
+      },
+      options()
+    );
+    expect(result.issues.some((i) => i.message.includes("Marked Paid"))).toBe(false);
+  });
+
+  it("rejects a creditor invoice marked Paid while a balance remains (Section 18)", () => {
+    const base = validReport();
+    const result = validateFinanceReport(
+      {
+        ...base,
+        creditors: {
+          ...base.creditors,
+          records: [{ ...base.creditors.records[0], invoiceAmount: 30000, amountPaid: 10000, status: "Paid" }],
+        },
+      },
+      options()
+    );
+    expect(result.issues.some((i) => i.message.includes("Marked Paid"))).toBe(true);
+  });
+
+  it("rejects a budget submission that silently blends two financial years (Section 12)", () => {
+    const base = validReport();
+    const line = base.budgets.lines[0];
+    const result = validateFinanceReport(
+      {
+        ...base,
+        budgets: {
+          ...base.budgets,
+          lines: [
+            line,
+            { ...line, id: "b2", budgetId: "B-02", financialYear: "2027/28", budgetLine: "Fleet" },
+          ],
+        },
+      },
+      options()
+    );
+    expect(result.issues.some((i) => i.message.includes("more than one financial year"))).toBe(true);
+  });
+
+  it("flags budget lines where only some state their financial year", () => {
+    const base = validReport();
+    const line = base.budgets.lines[0];
+    const result = validateFinanceReport(
+      {
+        ...base,
+        budgets: {
+          ...base.budgets,
+          lines: [line, { ...line, id: "b2", budgetId: "B-02", financialYear: "", budgetLine: "Fleet" }],
+        },
+      },
+      options()
+    );
+    expect(result.issues.some((i) => i.message.includes("Only 1 of 2"))).toBe(true);
   });
 
   it("rejects a half-supplied forecast", () => {

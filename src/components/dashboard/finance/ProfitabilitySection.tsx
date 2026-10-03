@@ -111,6 +111,31 @@ export function ProfitabilitySection({
             </FinFieldset>
           )}
 
+          {summary && (
+            <FinFieldset
+              title="Gross position (calculated)"
+              description="Section 21. Gross profit uses only costs classified as direct."
+            >
+              <Readout label="Direct costs" value={formatCurrency(summary.directExpenses, config.currencySymbol)} />
+              <Readout label="Indirect costs / overhead" value={formatCurrency(summary.indirectExpenses, config.currencySymbol)} />
+              <Readout
+                label="Gross profit"
+                value={formatCurrency(summary.grossProfit, config.currencySymbol)}
+              />
+              <Readout
+                label="Gross margin"
+                value={summary.grossMarginPct === null ? "Not derivable" : `${summary.grossMarginPct.toFixed(1)}%`}
+              />
+            </FinFieldset>
+          )}
+
+          {summary && summary.grossProfit === null && (
+            <FinanceDataQualityNote
+              state="Gross profit not reported"
+              detail="No expense line has been classified as a direct cost, so gross profit and gross margin cannot be calculated. Classify at least one line as Direct to publish them. Unclassified lines are treated as overhead, and nothing is promoted into a direct cost on Finance's behalf."
+            />
+          )}
+
           {summary && !summary.complete && (
             <FinanceDataQualityNote
               state="Surplus cannot be calculated yet"
@@ -141,6 +166,14 @@ export function ProfitabilitySection({
                       options={config.expenseCategories.map((c) => ({ value: c, label: c }))}
                       onChange={(categoryId) => update(line.id, { categoryId })}
                       required
+                    />
+                    <FinSelectField
+                      label="Cost type"
+                      value={line.costType}
+                      options={[{ value: "Direct", label: "Direct" }, { value: "Indirect", label: "Indirect" }]}
+                      onChange={(costType) => update(line.id, { costType })}
+                      placeholder="Unclassified (counted as overhead)"
+                      hint="Direct costs feed gross profit. Unclassified lines count as overhead."
                     />
                     <FinTextField label="Description" value={line.description} onChange={(description) => update(line.id, { description })} required />
                     <FinTextField label="Cost centre" value={line.costCentre} onChange={(costCentre) => update(line.id, { costCentre })} />

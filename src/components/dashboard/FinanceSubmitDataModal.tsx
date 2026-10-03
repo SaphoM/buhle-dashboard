@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { Modal } from "../common/Modal";
 import { StatusBadge } from "../kpi/StatusBadge";
-import { useDataStore } from "../../data/DataStoreContext";
+import { useDataStore, type DataStoreValue } from "../../data/DataStoreContext";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../common/ToastContext";
-import { computeNextDueDate, getEffectiveStatus } from "../../data/cycleEngine";
+import { computeNextDueDate, getEffectiveStatus, getOpenFinanceCycle } from "../../data/cycleEngine";
 import { getStatusForValue } from "../../data/kpiEngine";
 import { createBlankFinanceReport } from "../../data/financeSeed";
 import { FINANCE_KPI_IDS, computeFinanceKpis, formatCurrency, kpisNeedingExplanation } from "../../data/financeEngine";
@@ -64,7 +64,7 @@ const SECTION_KPIS: Record<FinanceSectionKey, string[]> = {
   budgets: [FINANCE_KPI_IDS.budgetUtilisation, FINANCE_KPI_IDS.budgetRemaining],
   debtors: [FINANCE_KPI_IDS.debtorsTotal, FINANCE_KPI_IDS.debtors90Plus, FINANCE_KPI_IDS.collectionRate],
   creditors: [FINANCE_KPI_IDS.creditorsTotal, FINANCE_KPI_IDS.creditors90Plus],
-  profitability: [FINANCE_KPI_IDS.operatingSurplus, FINANCE_KPI_IDS.operatingMargin],
+  profitability: [FINANCE_KPI_IDS.operatingSurplus, FINANCE_KPI_IDS.operatingMargin, FINANCE_KPI_IDS.grossMargin],
 };
 
 /**
@@ -98,6 +98,23 @@ const SECTION_KPIS: Record<FinanceSectionKey, string[]> = {
  *     RAG, evaluate EWS, reconcile risks, create actions, update dashboards,
  *     schedule the next cycle, write the audit entry.
  */
+/**
+ * How many Amber or Red warnings this submission will raise.
+ *
+ * A KPI with no approved threshold cannot warn: there is nothing to be measured
+ * against, and Section 33 forbids presenting an unthresholded figure as a
+ * performance result. One definition, so the review preview, the success panel
+ * and the toast cannot disagree about the same submission.
+ */
+function countWarnings(computation: ReturnType<typeof computeFinanceKpis>, kpis: DataStoreValue["kpis"]): number {
+  return computation.entries.filter((e) => {
+    const kpi = kpis.find((k) => k.id === e.kpiId);
+    return (
+      kpi && kpi.greenThreshold !== null && kpi.amberThreshold !== null && getStatusForValue(kpi, e.value) !== "green"
+    );
+  }).length;
+}
+
 export function FinanceSubmitDataModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { kpis, cycles, financeReports, financeConfig, saveFinanceDraft, recordFinanceImport, submitFinanceReport } =
     useDataStore();
@@ -107,15 +124,7 @@ export function FinanceSubmitDataModal({ open, onClose }: { open: boolean; onClo
 
   // The cycle this submission fulfils: the soonest-due open Finance cycle, using
   // the same cycle engine the dashboard reads.
-  const cycle = useMemo(
-    () =>
-      cycles
-        .filter((c) => c.department === "Finance")
-        .filter((c) => !["Accepted", "Closed"].includes(getEffectiveStatus(c)))
-        .filter((c) => !["Submitted", "Validation Required"].includes(getEffectiveStatus(c)))
-        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0],
-    [cycles]
-  );
+  const cycle = useMemo(() => getOpenFinanceCycle(cycles), [cycles]);
 
   const existingDraft = useMemo(
     () =>
@@ -230,6 +239,9 @@ export function FinanceSubmitDataModal({ open, onClose }: { open: boolean; onClo
     if (!working || !validation) return;
     if (!validation.valid) {
       setIssues(validation.issues);
+      // Section 36: a refused submission is announced. Without this the dialog
+      // simply does not open and the click appears to have done nothing.
+      toast.error("Finance submission could not be completed. The blocking issues are listed on each section.");
       const first = validation.issues[0]?.section;
       if (first) setStep(first);
       return;
@@ -246,9 +258,22 @@ export function FinanceSubmitDataModal({ open, onClose }: { open: boolean; onClo
       const first = outcome.issues?.[0]?.section;
       if (first) setStep(first);
       setShowReview(false);
+      // Section 36: a rejected submission is not silent. Without this the modal
+      // closes the review and the user is left guessing whether anything saved.
+      toast.error("Finance submission could not be completed. The blocking issues are listed on each section.");
       return;
     }
-    const warningCount = outcome.alerts?.filter((a) => a.level === "amber" || a.level === "red").length ?? 0;
+    // Counted from the same dry run the review screen showed, so the toast, the
+    // success panel and the review all quote one number. Reading the alerts off
+    // the committed run instead could count a different set.
+    const warningCount = computation ? countWarnings(computation, kpis) : 0;
+    // Section 36: the confirmation is announced, not only displayed on screen,
+    // so it is still seen after the modal closes and the count is explicit.
+    toast.success(
+      warningCount > 0
+        ? `Finance submission saved with ${warningCount} warning${warningCount === 1 ? "" : "s"} detected`
+        : "Finance submission saved successfully"
+    );
     setDone({
       nextDueDate: outcome.nextDueDate,
       nextPeriod: outcome.nextReportingPeriod,
@@ -666,12 +691,7 @@ function ReviewPanel({
   onCommentary: (patch: Partial<FinanceReport["commentary"]>) => void;
 }) {
   const { kpiExplanations: _perKpi, ...commentary } = report.commentary;
-  const amberCount = computation.entries.filter((e) => {
-    const kpi = kpis.find((k) => k.id === e.kpiId);
-    return (
-      kpi && kpi.greenThreshold !== null && kpi.amberThreshold !== null && getStatusForValue(kpi, e.value) !== "green"
-    );
-  }).length;
+  const amberCount = countWarnings(computation, kpis);
 
   const headline: Record<FinanceSectionKey, { label: string; value: string }> = {
     revenue: {
