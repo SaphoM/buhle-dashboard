@@ -13,5 +13,9 @@ fi
 current=$(grep -o 'BUILD_VERSION = [0-9]*' "$VERSION_FILE" | grep -o '[0-9]*')
 next=$((current + 1))
 
-sed -i '' "s/BUILD_VERSION = [0-9]*/BUILD_VERSION = ${next}/" "$VERSION_FILE"
+# -i.bak rather than -i '' : BSD sed (macOS) needs a suffix argument to -i,
+# while GNU sed (Linux) treats a bare '' as the script and then fails on it.
+# An explicit suffix is accepted by both, so the bump works on either platform.
+sed -i.bak "s/BUILD_VERSION = [0-9]*/BUILD_VERSION = ${next}/" "$VERSION_FILE"
+rm -f "${VERSION_FILE}.bak"
 git add "$VERSION_FILE"
