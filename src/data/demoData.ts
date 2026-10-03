@@ -347,6 +347,11 @@ export const DEMO_RISKS: Risk[] = [
     name: "Absenteeism not tracked (data gap)",
     description: "No system currently captures staff absenteeism - paper registers introduced in 2026 are not digitised, and Praxima tracks leave only.",
     kpiId: "kpi-absenteeism",
+    // Tagged as a data gap, not a performance problem: the figure is missing
+    // rather than bad. The HR Data Submission cycle closes this gap, at which
+    // point the EWS engine resolves this risk and opens a real performance
+    // risk if the reported absenteeism breaches a threshold.
+    origin: "data_gap",
     currentValue: 0,
     target: 0,
     threshold: 0,

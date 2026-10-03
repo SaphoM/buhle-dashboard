@@ -25,16 +25,34 @@ function generateExecutiveInsight(kpis: Kpi[]): string[] {
   // red/amber KPIs and states variance in plain language. KPIs with nothing
   // submitted are excluded here (variance is meaningless) and surfaced
   // separately as a data-quality gap instead.
-  const flagged = kpis.filter((k) => k.dataAvailable !== false && getStatus(k) !== "green").sort(
-    (a, b) => Math.abs(b.currentValue - b.target) / b.target - Math.abs(a.currentValue - a.target) / a.target
-  );
+  // Only a genuine Amber/Red judgement is a performance statement. "no_data",
+  // "not_available" and "threshold_unset" are all statements about what we
+  // don't know, so they are excluded here and surfaced as data-quality notes
+  // instead of being dressed up as performance (HR spec Sections 8, 24, 25).
+  const flagged = kpis
+    .filter((k) => {
+      const s = getStatus(k);
+      return s === "amber" || s === "red";
+    })
+    .sort(
+      (a, b) => Math.abs(b.currentValue - b.target) / b.target - Math.abs(a.currentValue - a.target) / a.target
+    );
   return flagged.slice(0, 4).map((k) => k.insight);
 }
 
 function generateDataQualityNotes(kpis: Kpi[]): string[] {
-  return kpis.filter((k) => k.dataAvailable === false).map(
-    (k) => `${k.department}: "${k.name}" has not been submitted this period - ${k.insight}`
-  );
+  // A KPI that cannot be judged is stated in its own terms: either it is
+  // unavailable by design, or it is simply waiting on someone to submit it.
+  const unavailable = kpis
+    .filter((k) => getStatus(k) === "not_available")
+    .map((k) => `${k.department}: "${k.name}" is not yet available - ${k.notAvailableReason ?? k.insight}`);
+  const notSubmitted = kpis
+    .filter((k) => getStatus(k) === "no_data")
+    .map((k) => `${k.department}: "${k.name}" has not been submitted this period - ${k.insight}`);
+  const noThreshold = kpis
+    .filter((k) => getStatus(k) === "threshold_unset")
+    .map((k) => `${k.department}: "${k.name}" has a reported value but no approved threshold yet - ${k.insight}`);
+  return [...unavailable, ...notSubmitted, ...noThreshold];
 }
 
 export function ExecutiveOverview() {
@@ -55,13 +73,14 @@ export function ExecutiveOverview() {
     })
     .filter((row): row is { department: Department; cycle: (typeof allCycles)[number] } => row !== null);
   const strategicKpis = STRATEGIC_KPI_IDS.map((id) => allKpis.find((k) => k.id === id)!).filter(Boolean);
-  const counts = { green: 0, amber: 0, red: 0, no_data: 0 };
+  const counts = { green: 0, amber: 0, red: 0, no_data: 0, not_available: 0, threshold_unset: 0 };
   allKpis.forEach((k) => counts[getStatus(k)]++);
   const total = allKpis.length;
-  // Organisational health is scored only over KPIs that actually have data -
-  // a missing figure is a data-quality problem, not evidence of good or bad
-  // performance, so it must not silently inflate or deflate the score.
-  const reportingTotal = total - counts.no_data;
+  // Organisational health is scored only over KPIs that actually carry a
+  // verdict. A missing figure, an unavailable-by-design KPI, or a value with no
+  // approved threshold is a data-quality problem, not evidence of good or bad
+  // performance, so none of them may silently inflate or deflate the score.
+  const reportingTotal = total - counts.no_data - counts.not_available - counts.threshold_unset;
   const score = reportingTotal === 0
     ? 0
     : Math.round(((counts.green * 100 + counts.amber * 55 + counts.red * 10) / (reportingTotal * 100)) * 100);

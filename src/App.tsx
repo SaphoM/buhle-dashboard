@@ -1,22 +1,40 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { DataStoreProvider } from "./data/DataStoreContext";
 import { ToastProvider } from "./components/common/ToastContext";
 import { canAccess, getHomePath } from "./auth/permissions";
 import { AppShell } from "./components/layout/AppShell";
-import { Login } from "./pages/Login";
-import { ExecutiveOverview } from "./pages/ExecutiveOverview";
-import { Finance } from "./pages/Finance";
-import { Operations } from "./pages/Operations";
-import { Farming } from "./pages/Farming";
-import { Hr } from "./pages/Hr";
-import { Marketing } from "./pages/Marketing";
-import { Alumni } from "./pages/Alumni";
-import { RiskCentre } from "./pages/RiskCentre";
-import { CorrectiveActions } from "./pages/CorrectiveActions";
-import { Reports } from "./pages/Reports";
-import { DataSubmissions } from "./pages/DataSubmissions";
-import { Administration } from "./pages/Administration";
+
+const Login = lazy(() => import("./pages/Login").then((m) => ({ default: m.Login })));
+const ExecutiveOverview = lazy(() =>
+  import("./pages/ExecutiveOverview").then((m) => ({ default: m.ExecutiveOverview })),
+);
+const Finance = lazy(() => import("./pages/Finance").then((m) => ({ default: m.Finance })));
+const Operations = lazy(() => import("./pages/Operations").then((m) => ({ default: m.Operations })));
+const Farming = lazy(() => import("./pages/Farming").then((m) => ({ default: m.Farming })));
+const Hr = lazy(() => import("./pages/Hr").then((m) => ({ default: m.Hr })));
+const Marketing = lazy(() => import("./pages/Marketing").then((m) => ({ default: m.Marketing })));
+const Alumni = lazy(() => import("./pages/Alumni").then((m) => ({ default: m.Alumni })));
+const RiskCentre = lazy(() => import("./pages/RiskCentre").then((m) => ({ default: m.RiskCentre })));
+const CorrectiveActions = lazy(() =>
+  import("./pages/CorrectiveActions").then((m) => ({ default: m.CorrectiveActions })),
+);
+const Reports = lazy(() => import("./pages/Reports").then((m) => ({ default: m.Reports })));
+const DataSubmissions = lazy(() =>
+  import("./pages/DataSubmissions").then((m) => ({ default: m.DataSubmissions })),
+);
+const Administration = lazy(() =>
+  import("./pages/Administration").then((m) => ({ default: m.Administration })),
+);
+
+function PageFallback() {
+  return (
+    <div className="flex h-64 items-center justify-center" role="status" aria-live="polite">
+      <span className="text-sm text-slate-400">Loading…</span>
+    </div>
+  );
+}
 
 function Protected({ path, children }: { path: string; children: React.ReactNode }) {
   const { user } = useAuth();
@@ -31,7 +49,11 @@ function Protected({ path, children }: { path: string; children: React.ReactNode
       </AppShell>
     );
   }
-  return <AppShell>{children}</AppShell>;
+  return (
+    <AppShell>
+      <Suspense fallback={<PageFallback />}>{children}</Suspense>
+    </AppShell>
+  );
 }
 
 function AppRoutes() {
@@ -39,7 +61,18 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to={getHomePath(user.role)} replace /> : <Login />} />
+      <Route
+        path="/login"
+        element={
+          user ? (
+            <Navigate to={getHomePath(user.role)} replace />
+          ) : (
+            <Suspense fallback={<PageFallback />}>
+              <Login />
+            </Suspense>
+          )
+        }
+      />
       <Route path="/" element={<Protected path="/"><ExecutiveOverview /></Protected>} />
       <Route path="/finance" element={<Protected path="/finance"><Finance /></Protected>} />
       <Route path="/operations" element={<Protected path="/operations"><Operations /></Protected>} />

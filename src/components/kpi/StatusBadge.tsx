@@ -9,6 +9,8 @@ const styles: Record<RagStatus, string> = {
   amber: "bg-butter text-ink border-butter-dark",
   red: "bg-ink text-butter border-ink",
   no_data: "bg-white text-ink-soft/50 border-dashed border-ink/20",
+  not_available: "bg-white text-ink-soft/50 border-dashed border-ink/20",
+  threshold_unset: "bg-white text-ink-soft/50 border-dashed border-butter-dark/50",
 };
 
 const dot: Record<RagStatus, string> = {
@@ -16,6 +18,8 @@ const dot: Record<RagStatus, string> = {
   amber: "bg-ink",
   red: "bg-rose-400",
   no_data: "bg-ink-soft/30",
+  not_available: "bg-ink-soft/20",
+  threshold_unset: "bg-butter-dark",
 };
 
 export function StatusBadge({ status, compact }: { status: RagStatus; compact?: boolean }) {

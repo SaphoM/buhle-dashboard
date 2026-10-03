@@ -10,7 +10,7 @@ import {
   type EvidenceStatus,
   type MasterRecord,
 } from "../data/masterData";
-import type { Department } from "../types";
+import type { Department, ReportingFrequency } from "../types";
 import { Tooltip } from "../components/common/Tooltip";
 import { useToast } from "../components/common/ToastContext";
 
@@ -79,8 +79,19 @@ function MasterDataList({ title, items }: { title: string; items: MasterRecord[]
   );
 }
 
+// Cadences an HR reporting cycle can realistically run at. Held here rather
+// than in the cycle engine so the option set is configuration, not a constant.
+const HR_FREQUENCY_OPTIONS = [
+  "Weekly",
+  "Monthly",
+  "Quarterly",
+  "Annually",
+  "Per Cohort",
+  "Per Season",
+] as const satisfies readonly ReportingFrequency[];
+
 export function Administration() {
-  const { kpis, updateKpiThresholds } = useDataStore();
+  const { kpis, updateKpiThresholds, hrConfig, updateHrConfig, auditLog } = useDataStore();
   const [kpiDeptFilter, setKpiDeptFilter] = useState<Department | "all">("all");
   const toast = useToast();
   // Threshold inputs fire onChange per keystroke (so live cross-role display
@@ -89,7 +100,11 @@ export function Administration() {
   // fired on blur, not on every keystroke.
   const dirtyThresholds = useRef<Set<string>>(new Set());
 
-  function updateThreshold(id: string, field: "greenThreshold" | "amberThreshold" | "target", value: number) {
+  function updateThreshold(
+    id: string,
+    field: "greenThreshold" | "amberThreshold" | "target",
+    value: number | null
+  ) {
     dirtyThresholds.current.add(`${id}-${field}`);
     updateKpiThresholds(id, { [field]: value });
   }
@@ -190,8 +205,9 @@ export function Administration() {
                     <input
                       type="number"
                       className="w-24 rounded-full border border-ink/10 bg-white px-3 py-1"
-                      value={k.greenThreshold}
-                      onChange={(e) => updateThreshold(k.id, "greenThreshold", Number(e.target.value))}
+                      value={k.greenThreshold ?? ""}
+                      placeholder="Not set"
+                      onChange={(e) => updateThreshold(k.id, "greenThreshold", e.target.value === "" ? null : Number(e.target.value))}
                       onBlur={() => confirmThresholdEdit(k.id, "greenThreshold")}
                     />
                   </td>
@@ -199,8 +215,9 @@ export function Administration() {
                     <input
                       type="number"
                       className="w-24 rounded-full border border-ink/10 bg-white px-3 py-1"
-                      value={k.amberThreshold}
-                      onChange={(e) => updateThreshold(k.id, "amberThreshold", Number(e.target.value))}
+                      value={k.amberThreshold ?? ""}
+                      placeholder="Not set"
+                      onChange={(e) => updateThreshold(k.id, "amberThreshold", e.target.value === "" ? null : Number(e.target.value))}
                       onBlur={() => confirmThresholdEdit(k.id, "amberThreshold")}
                     />
                   </td>
@@ -215,6 +232,109 @@ export function Administration() {
           the HR KPI Calc workbook's own 2026 goals). "Proposed" means it is a starting point from the discovery
           brief, not yet Board-approved - see Section 19 of the brief.
         </p>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
+          HR Configuration{" "}
+          <span className="normal-case text-ink-soft/40">
+            - the switches that govern what HR can report at all
+          </span>
+        </h2>
+        <div className="card-surface flex flex-col gap-5 rounded-3xl border border-ink/10 p-6 shadow-sm">
+          <label className="flex max-w-sm flex-col gap-1">
+            <span className="text-xs font-medium text-ink-soft/60">HR reporting frequency</span>
+            <select
+              className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+              value={hrConfig.reportingFrequency}
+              onChange={(e) =>
+                updateHrConfig({ reportingFrequency: e.target.value as typeof hrConfig.reportingFrequency })
+              }
+            >
+              {HR_FREQUENCY_OPTIONS.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </select>
+            <span className="text-[11px] text-ink-soft/40">
+              Drives the calculated next submission date for every HR cycle. Monthly is the proposed default
+              (HR spec Section 2).
+            </span>
+          </label>
+
+          <label className="flex max-w-sm flex-col gap-1">
+            <span className="text-xs font-medium text-ink-soft/60">Standard working days per month</span>
+            <input
+              type="number"
+              min={1}
+              className="w-32 rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+              value={hrConfig.standardWorkingDaysPerMonth}
+              onChange={(e) => updateHrConfig({ standardWorkingDaysPerMonth: Number(e.target.value) })}
+            />
+            <span className="text-[11px] text-ink-soft/40">
+              Used to derive expected employee-days when HR leaves that field blank.
+            </span>
+          </label>
+
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={hrConfig.performanceManagementActive}
+                onChange={(e) => updateHrConfig({ performanceManagementActive: e.target.checked })}
+                className="mt-1 h-4 w-4 rounded border-ink/20 accent-ink"
+              />
+              <span>
+                <span className="text-sm font-semibold text-ink">
+                  Formal performance-management system is active
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-ink-soft/50">
+                  Leave this <strong>off</strong> until Buhle adopts a formal performance-management process. While
+                  it is off, the HR Performance section reports &quot;Performance Management System Not Yet
+                  Active&quot; and the Staff Performance KPI shows &quot;Not Yet Available&quot; everywhere, including
+                  the Executive Dashboard. No figure is fabricated (HR spec Sections 8, 9 and test 5).
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
+          Audit Log <span className="normal-case text-ink-soft/40">- who changed what, and when</span>
+        </h2>
+        <div className="card-surface overflow-hidden rounded-3xl border border-ink/10 shadow-sm">
+          {auditLog.length === 0 ? (
+            <p className="p-4 text-sm text-ink-soft/40">
+              Nothing recorded yet. Submissions, threshold changes and due-date overrides are logged here.
+            </p>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-ink/10 bg-ink/[0.03] text-xs uppercase text-ink-soft/40">
+                <tr>
+                  <th className="px-4 py-2.5 font-medium">When</th>
+                  <th className="px-4 py-2.5 font-medium">Who</th>
+                  <th className="px-4 py-2.5 font-medium">Department</th>
+                  <th className="px-4 py-2.5 font-medium">Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...auditLog].reverse().map((a) => (
+                  <tr key={a.id} className="border-b border-ink/5 last:border-0">
+                    <td className="px-4 py-2 text-xs text-ink-soft/50">
+                      {new Date(a.timestamp).toLocaleString("en-ZA")}
+                    </td>
+                    <td className="px-4 py-2 text-ink-soft/70">{a.actor}</td>
+                    <td className="px-4 py-2 text-ink-soft/70">{a.department}</td>
+                    <td className="px-4 py-2 text-ink-soft/80">{a.summary}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </section>
 
       <section>

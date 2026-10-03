@@ -28,6 +28,27 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     primaryKpiId: "kpi-surplus",
   },
   {
+    // The consolidated HR Data Submission cycle introduced by the HR spec
+    // (Section 1/2). It replaces the two ad-hoc HR packs below, which only
+    // covered part of the picture: turnover and recruitment sat in one
+    // quarterly pack while absenteeism sat in a separate register cycle.
+    // One monthly cycle now drives all six HR sections and every HR KPI.
+    cycleId: "cyc-hr-data-2026-09",
+    department: "Human Resources",
+    dataset: "HR Data Submission (Attendance, Leave, Performance, Turnover, Skills, Vacancies)",
+    description:
+      "Monthly consolidated HR report: attendance and absenteeism, leave, performance, turnover, skills and training, and the recruitment pipeline.",
+    frequency: "Monthly",
+    reportingPeriod: "September 2026",
+    startDate: "2026-09-01",
+    dueDate: "2026-09-30",
+    status: "In Progress",
+    owner: "HR Manager",
+    completionPct: 0,
+    notes: "Cadence is configurable in Administration → HR Configuration; monthly is the proposed default.",
+    primaryKpiId: "kpi-absenteeism",
+  },
+  {
     cycleId: "cyc-hr-2026-q3",
     department: "Human Resources",
     dataset: "HR KPI Pack (Turnover, Time to Fill, Cost per Hire, Offer Acceptance)",
@@ -36,10 +57,13 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     reportingPeriod: "Q3 2026",
     startDate: "2026-07-01",
     dueDate: "2026-10-15",
-    status: "In Progress",
+    // Superseded by cyc-hr-data-2026-09, which reports the same KPIs from the
+    // underlying records instead of as a pre-calculated pack. Retained closed
+    // rather than deleted so the quarterly history stays auditable.
+    status: "Closed",
     owner: "HR Manager",
-    completionPct: 70,
-    notes: "Confirmed cadence - Q1/Q2/Q3 2026 sheets already exist in the real HR workbook.",
+    completionPct: 100,
+    notes: "Superseded by the consolidated monthly HR Data Submission cycle; figures now flow from HR records, not a manual pack.",
     primaryKpiId: "kpi-turnover",
   },
   {
@@ -54,10 +78,12 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     // Baseline status is "Open", not "Overdue" - getEffectiveStatus derives
     // Overdue automatically once the due date passes, per Section 48
     // ("the system must calculate these automatically where possible").
-    status: "Open",
+    // Superseded by cyc-hr-data-2026-09: attendance is now one of six
+    // sections in the monthly report rather than its own daily cycle.
+    status: "Closed",
     owner: "HR Manager",
-    completionPct: 0,
-    notes: "No digital system exists yet - see the Staff Absenteeism Rate KPI (No Data) and the Administration → To Confirm Register.",
+    completionPct: 100,
+    notes: "Superseded by the consolidated monthly HR Data Submission cycle. Paper registers are still the source - see the Staff Absenteeism Rate KPI and the Administration → To Confirm Register.",
     primaryKpiId: "kpi-absenteeism",
   },
   {

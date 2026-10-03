@@ -10,6 +10,7 @@ import { MiniBarTrend } from "../kpi/MiniBarTrend";
 import { DataFreshnessTag } from "../common/DataFreshnessTag";
 import { formatValue, getStatus } from "../../data/kpiEngine";
 import { SubmitDataModal } from "./SubmitDataModal";
+import { HrSubmitDataModal } from "./HrSubmitDataModal";
 
 export function DepartmentDashboard({
   department,
@@ -20,6 +21,10 @@ export function DepartmentDashboard({
 }) {
   const { kpis: allKpis, cycles: allCycles, risks: allRisks, actions: allActions } = useDataStore();
   const [modalOpen, setModalOpen] = useState(false);
+  // HR reports through its own six-section cycle rather than the flat KPI form:
+  // its KPIs are derived from underlying records, so typing the percentages
+  // directly would bypass the engine entirely (HR spec Sections 1, 10, 11).
+  const usesHrSubmission = department === "Human Resources";
   const kpis = allKpis.filter((k) => k.department === department);
   const allDeptRisks = allRisks.filter((r) => r.department === department);
   const risks = allDeptRisks.filter((r) => r.status !== "Resolved");
@@ -38,7 +43,7 @@ export function DepartmentDashboard({
 
   // Department health widgets - same language as the Executive Overview,
   // scoped to this department, so managers get the same at-a-glance read.
-  const counts = { green: 0, amber: 0, red: 0, no_data: 0 };
+  const counts = { green: 0, amber: 0, red: 0, no_data: 0, not_available: 0, threshold_unset: 0 };
   kpis.forEach((k) => counts[getStatus(k)]++);
   const total = kpis.length;
   const reportingTotal = total - counts.no_data;
@@ -66,7 +71,7 @@ export function DepartmentDashboard({
             onClick={() => setModalOpen(true)}
             className="whitespace-nowrap rounded-full bg-ink px-7 py-2 text-sm font-semibold text-butter hover:bg-ink-soft"
           >
-            Submit Data
+            {usesHrSubmission ? "Submit HR Data" : "Submit Data"}
           </button>
         </div>
       </div>
@@ -246,7 +251,11 @@ export function DepartmentDashboard({
         </div>
       </section>
 
-      <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
+      {usesHrSubmission ? (
+        <HrSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      ) : (
+        <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
+      )}
     </div>
   );
 }

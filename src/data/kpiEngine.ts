@@ -8,7 +8,7 @@ import type { Kpi, RagStatus, TrendDirection } from "../types";
  * config/table without changing this logic (see Section 9 of the brief).
  */
 export function getStatus(kpi: Kpi): RagStatus {
-  if (kpi.dataAvailable === false) return "no_data";
+  if (kpi.dataAvailable === false) return kpi.notAvailableReason ? "not_available" : "no_data";
   return getStatusForValue(kpi, kpi.currentValue);
 }
 
@@ -17,9 +17,14 @@ export function getStatus(kpi: Kpi): RagStatus {
  * evaluates an arbitrary candidate value against a KPI's own thresholds,
  * so the submission modal can show a live status as the manager types,
  * before that value has actually been saved as the KPI's currentValue.
+ *
+ * A missing threshold short-circuits to "threshold_unset": without an approved
+ * limit there is no defensible way to call a number Green, so the engine says
+ * so rather than guessing (HR spec Sections 5, 7, 13, 16).
  */
 export function getStatusForValue(kpi: Kpi, value: number): RagStatus {
   const { greenThreshold, amberThreshold, lowerIsBetter } = kpi;
+  if (greenThreshold === null || amberThreshold === null) return "threshold_unset";
   if (lowerIsBetter) {
     if (value <= greenThreshold) return "green";
     if (value <= amberThreshold) return "amber";
@@ -75,6 +80,8 @@ export const statusLabel: Record<RagStatus, string> = {
   amber: "Emerging Risk",
   red: "Critical",
   no_data: "No Data",
+  not_available: "Not Yet Available",
+  threshold_unset: "Threshold Not Set",
 };
 
 export const statusMeaning: Record<RagStatus, string> = {
@@ -82,4 +89,8 @@ export const statusMeaning: Record<RagStatus, string> = {
   amber: "Develop a corrective action plan and monitor closely.",
   red: "Escalate to Executive Management / Board - immediate intervention required.",
   no_data: "No figure submitted for this department/period yet - this is a data-quality gap, not a performance result.",
+  not_available:
+    "No system or process currently exists to produce this figure - a capability gap, not a performance result.",
+  threshold_unset:
+    "Data has been submitted but no approved threshold exists yet, so no status can be given. Monitoring only.",
 };

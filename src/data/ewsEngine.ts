@@ -1,4 +1,4 @@
-import type { CorrectiveAction, Department, Kpi, RagStatus, Risk, RiskCategory } from "../types";
+import type { CorrectiveAction, Department, Kpi, RagStatus, Risk, RiskCategory, RiskLevel } from "../types";
 
 /**
  * EWS reaction engine (Section 62, steps 5-7 - "Create/update risks if
@@ -25,6 +25,16 @@ export function autoRiskId(kpiId: string): string {
   return `risk-auto-${kpiId}`;
 }
 
+/**
+ * The threshold the KPI actually breached, recorded on the risk as evidence.
+ * getStatusForValue only ever returns amber/red once both thresholds are set,
+ * so this is non-null in practice; the target fallback keeps the type honest
+ * without inventing a limit of its own.
+ */
+function breachedThreshold(kpi: Kpi, level: RiskLevel): number {
+  return (level === "red" ? kpi.amberThreshold : kpi.greenThreshold) ?? kpi.target;
+}
+
 export interface EwsAlert {
   id: string;
   kind: "created" | "escalated" | "deescalated" | "resolved";
@@ -43,7 +53,9 @@ export interface EwsAlert {
 export function reconcileRiskForKpi(
   kpi: Kpi,
   newStatus: RagStatus,
-  prevRisks: Risk[]
+  prevRisks: Risk[],
+  /** The period the submitted figure covers, when the submission knows it. */
+  reportingPeriod?: string
 ): { risks: Risk[]; alert: EwsAlert | null; createdRisk?: Risk } {
   const today = new Date().toISOString().slice(0, 10);
   // Match on kpiId, not a fixed id - several demo risks were hand-authored
@@ -52,16 +64,33 @@ export function reconcileRiskForKpi(
   // risk for the same KPI instead of updating the one already there.
   const existing = prevRisks.find((r) => r.kpiId === kpi.id && r.status !== "Resolved");
 
-  if (newStatus === "green" || newStatus === "no_data") {
+  // Only a genuine Amber/Red verdict is a risk. "no_data", "not_available" and
+  // "threshold_unset" are all statements about what we *don't* know, not about
+  // performance, so none of them may raise or keep a risk alive - and if a KPI
+  // previously did breach a threshold, any of these states resolves it rather
+  // than leaving a stale risk on the board (HR spec Section 25).
+  if (newStatus !== "amber" && newStatus !== "red") {
+    // A data-gap risk is not a performance risk that has recovered: the figure
+    // still cannot be produced. Closing it here would assert a recovery that
+    // never happened, so it is left open and untouched.
+    if (existing?.origin === "data_gap") return { risks: prevRisks, alert: null };
     if (existing) {
       const resolved: Risk = { ...existing, level: "green", status: "Resolved", resolutionDate: today };
+      // Wording matters: the risk only closes as "back on target" when the KPI
+      // actually returned to green. If it closed because the figure became
+      // unavailable or the threshold was removed, say that instead - otherwise
+      // the audit trail claims a performance recovery that never happened.
+      const message =
+        newStatus === "green"
+          ? `Resolved: "${kpi.name}" is back on target - ${kpi.department}.`
+          : `Closed: "${kpi.name}" no longer has an assessable status (${newStatus.replace("_", " ")}) - ${kpi.department}.`;
       return {
         risks: prevRisks.map((r) => (r.id === existing.id ? resolved : r)),
         alert: {
           id: `alert-${existing.id}-${Date.now()}`,
           kind: "resolved",
           level: "green",
-          message: `Resolved: "${kpi.name}" is back on target - ${kpi.department}.`,
+          message,
           timestamp: today,
         },
       };
@@ -74,17 +103,20 @@ export function reconcileRiskForKpi(
   const description = kpi.insight;
   const recommendedAction = `Review "${kpi.name}" with ${kpi.owner} and agree corrective action.`;
 
-  if (existing) {
+  if (existing && existing.origin !== "data_gap") {
     const escalating = existing.level !== newStatus;
     const updated: Risk = {
       ...existing,
       currentValue: kpi.currentValue,
       target: kpi.target,
-      threshold: newStatus === "red" ? kpi.amberThreshold : kpi.greenThreshold,
+      threshold: breachedThreshold(kpi, newStatus),
       level: newStatus,
       description,
       escalationLevel,
       status: "Active",
+      // A risk that keeps the period of the figure it is about cannot drift
+      // out of step with the KPI it tracks.
+      reportingPeriod: reportingPeriod ?? existing.reportingPeriod,
       ...(escalating ? { dateDetected: today } : {}),
     };
     return {
@@ -111,16 +143,37 @@ export function reconcileRiskForKpi(
     kpiId: kpi.id,
     currentValue: kpi.currentValue,
     target: kpi.target,
-    threshold: newStatus === "red" ? kpi.amberThreshold : kpi.greenThreshold,
+    threshold: breachedThreshold(kpi, newStatus),
     level: newStatus,
+    origin: "performance",
+    reportingPeriod,
     dateDetected: today,
     owner: kpi.owner,
     recommendedAction,
     escalationLevel,
     status: "Active",
   };
+  // The gap has been closed by this very submission, so the data-gap risk is
+  // superseded: it is resolved as "closed" rather than as "recovered", because
+  // no figure ever existed to recover. Escalating it in place would leave the
+  // Risk Centre claiming absenteeism is untracked on the same screen that
+  // shows the figure that proves it is tracked.
+  const superseded = existing?.origin === "data_gap";
+  const resolvedList = superseded
+    ? prevRisks.map((r) =>
+        r.id === existing.id
+          ? {
+              ...r,
+              status: "Resolved" as const,
+              resolutionDate: today,
+              level: "green" as const,
+              notes: `Closed: "${kpi.name}" is now reported by the ${kpi.department} submission, so the data gap this risk recorded no longer applies.`,
+            }
+          : r
+      )
+    : prevRisks;
   return {
-    risks: [...prevRisks, created],
+    risks: [...resolvedList, created],
     createdRisk: created,
     alert: {
       id: `alert-${id}-${Date.now()}`,
@@ -150,5 +203,21 @@ export function createActionForRisk(risk: Risk): CorrectiveAction {
     dueDate: due.toISOString().slice(0, 10),
     status: "Open",
     createdDate: risk.dateDetected,
+    // Section 19/24: the action has to explain itself without anyone having to
+    // go and look the risk up, so the KPI, value, verdict and period travel
+    // with it. An automatically staged action carries exactly as much context
+    // as one an executive raises by hand.
+    context: {
+      department: risk.department,
+      kpiName: risk.name,
+      currentValue: String(risk.currentValue),
+      target: String(risk.target),
+      ragStatus: risk.level,
+      // Falls back to the detection month only when nothing recorded the period.
+      reportingPeriod:
+        risk.reportingPeriod ??
+        new Date(risk.dateDetected).toLocaleDateString("en-ZA", { month: "long", year: "numeric" }),
+      dateDetected: risk.dateDetected,
+    },
   };
 }

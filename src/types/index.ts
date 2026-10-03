@@ -35,7 +35,16 @@ export type Department =
 // "no_data" is distinct from "green": a KPI with nothing submitted for the
 // current period must never read as on-target. See Section 24 of the brief -
 // "a dashboard showing Green because no one entered data is unacceptable."
-export type RagStatus = "green" | "amber" | "red" | "no_data";
+//
+// The HR submission specification (Section 25) sharpens this further: missing
+// data has several genuinely different causes and they must not be conflated,
+// because each implies a different response from management.
+//   no_data          - the department has a process but has not submitted yet
+//   not_available    - no system/process capable of producing the figure exists
+//                      (e.g. Staff Performance before a formal PMS is adopted)
+//   threshold_unset  - data was supplied, but no approved threshold exists yet,
+//                      so no Green/Amber/Red verdict can honestly be given
+export type RagStatus = "green" | "amber" | "red" | "no_data" | "not_available" | "threshold_unset";
 
 export type TrendDirection = "up" | "down" | "flat";
 
@@ -48,8 +57,11 @@ export interface Kpi {
   currentValue: number;
   previousValue: number;
   target: number;
-  greenThreshold: number; // value at/beyond which status is green (direction-aware)
-  amberThreshold: number; // value at/beyond which status is amber
+  // Nullable: a threshold that has not been approved yet must stay unset rather
+  // than being silently defaulted to a number, and an unset threshold yields
+  // "threshold_unset" - never a fabricated Green (HR spec Sections 5, 13, 16).
+  greenThreshold: number | null; // value at/beyond which status is green (direction-aware)
+  amberThreshold: number | null; // value at/beyond which status is amber
   // if true, lower values are better (e.g. dropout rate, mortality rate)
   lowerIsBetter?: boolean;
   history: { period: string; value: number }[];
@@ -61,6 +73,12 @@ export interface Kpi {
   // Finance/HR discovery questionnaires, Sept 2026). Forces "no_data" status
   // regardless of thresholds, instead of a fabricated Green/Amber/Red.
   dataAvailable?: boolean;
+  // Why the figure cannot be produced yet. Set alongside dataAvailable:false to
+  // distinguish "no system exists" (Not Yet Available) from "not submitted yet".
+  notAvailableReason?: string;
+  // Section 20: every dashboard KPI states when it was last updated, so a
+  // figure nobody has refreshed is visibly stale rather than quietly current.
+  lastUpdated?: string; // ISO date
   // Where this figure actually comes from today - shown on the KPI card so
   // nobody mistakes a manually-typed demo number for a live feed.
   sourceSystem?: string;
@@ -90,6 +108,32 @@ export interface CorrectiveAction {
   dueDate: string; // ISO date
   status: ActionStatus;
   createdDate: string;
+  /**
+   * Section 24: the context a manual action inherits from the risk it answers,
+   * so the Corrective Actions page can show *why* the action exists without
+   * the reader having to cross-reference the Risk Centre. Auto-staged actions
+   * from the EWS leave this unset - the risk itself carries the evidence.
+   */
+  context?: CorrectiveActionContext;
+}
+
+export interface CorrectiveActionContext {
+  department: Department;
+  kpiName: string;
+  currentValue: string;
+  target: string;
+  ragStatus: string;
+  reportingPeriod: string;
+  dateDetected: string;
+  notes?: string;
+}
+
+/** What a person must supply when raising an action against a risk (Section 24). */
+export interface CorrectiveActionDraft {
+  description: string;
+  owner: string;
+  dueDate: string;
+  notes?: string;
 }
 
 export interface Risk {
@@ -103,6 +147,19 @@ export interface Risk {
   target: number;
   threshold: number;
   level: RiskLevel;
+  /** The reporting period the underlying figure covers, e.g. "September 2026".
+   *  Distinct from dateDetected: a September risk detected in October is not an
+   *  October risk, and a corrective action quoting the wrong period misdirects
+   *  whoever has to act on it. */
+  reportingPeriod?: string;
+  /**
+   * What kind of problem this risk records. A "data_gap" risk says a figure
+   * cannot be produced at all; a "performance" risk says a figure was produced
+   * and it is off target. They are not the same problem and must not be
+   * updated in place as each other - a gap that has since been closed has to
+   * be resolved and replaced, not escalated (HR spec Section 24).
+   */
+  origin?: "data_gap" | "performance";
   dateDetected: string;
   owner: string;
   recommendedAction: string;
