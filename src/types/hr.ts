@@ -361,7 +361,12 @@ export type AuditAction =
   | "kpi_threshold_updated"
   | "cycle_due_date_overridden"
   | "action_created"
-  | "action_status_advanced";
+  | "action_status_advanced"
+  | "finance_draft_saved"
+  | "finance_report_submitted"
+  | "finance_config_updated"
+  | "finance_import_completed"
+  | "finance_import_failed";
 
 export interface AuditEntry {
   id: string;

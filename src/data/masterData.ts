@@ -145,7 +145,7 @@ export const DEPARTMENTS: DepartmentRecord[] = [
 // questionnaires - used to label KPI cards so nobody mistakes a manually
 // captured number for a live feed.
 export const DATA_SOURCES: Record<string, string> = {
-  finance: "Pastel (transactions) → Budget Monitor spreadsheet (manual)",
+  finance: "Finance submission (manual entry or Budget Monitor workbook import) - not a live feed",
   hrTurnoverEtc: "HR KPI Calc workbook (manual)",
   hrLeave: "Praxima (leave only - does not track absenteeism)",
   hrAttendance: "Paper attendance registers, introduced 2026 - not yet digitised",

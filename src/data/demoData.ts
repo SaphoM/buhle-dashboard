@@ -38,7 +38,7 @@ export const DEMO_KPIS: Kpi[] = [
     measurementFrequency: "monthly",
     owner: "Finance Manager",
     insight: "Revenue is 8% below target this period, driven mainly by lower commercial farm sales volumes.",
-    sourceSystem: "Pastel (transactions) → Budget Monitor spreadsheet (manual)",
+    sourceSystem: "Finance submission (manual entry or Budget Monitor workbook import)",
     thresholdApproval: "proposed",
   },
   {
@@ -55,7 +55,7 @@ export const DEMO_KPIS: Kpi[] = [
     measurementFrequency: "monthly",
     owner: "Finance Manager",
     insight: "Moved into deficit this period as revenue declined faster than cost containment measures.",
-    sourceSystem: "Pastel (transactions) → Budget Monitor spreadsheet (manual)",
+    sourceSystem: "Finance submission (manual entry or Budget Monitor workbook import)",
     thresholdApproval: "proposed",
   },
   {

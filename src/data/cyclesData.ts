@@ -14,7 +14,7 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     cycleId: "cyc-finance-2026-09",
     department: "Finance",
     dataset: "Budget Monitor (Actuals)",
-    description: "Income and expense actuals by cost centre (Delmas Campus, Support Office, Comm. Enterprises), reconciled against Pastel.",
+    description: "Income and expense actuals by cost centre (Delmas Campus, Support Office, Comm. Enterprises), captured through the six-section Finance submission or imported from the Budget Monitor workbook.",
     frequency: "Monthly",
     reportingPeriod: "September 2026",
     startDate: "2026-09-01",

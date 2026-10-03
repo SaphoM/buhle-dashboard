@@ -11,6 +11,8 @@ import {
   type MasterRecord,
 } from "../data/masterData";
 import type { Department, ReportingFrequency } from "../types";
+import { FINANCE_WORKBOOK_DEPENDENCY } from "../types/finance";
+import { FinanceWorkbookDependencyNotice } from "../components/dashboard/finance/FinanceSectionChrome";
 import { Tooltip } from "../components/common/Tooltip";
 import { useToast } from "../components/common/ToastContext";
 
@@ -90,8 +92,52 @@ const HR_FREQUENCY_OPTIONS = [
   "Per Season",
 ] as const satisfies readonly ReportingFrequency[];
 
+// The Finance cycle is monthly in practice (the Budget Monitor workbook is
+// updated monthly), so the option set stays close to that rather than offering
+// every cadence the type allows.
+const FINANCE_FREQUENCY_OPTIONS = [
+  "Weekly",
+  "Monthly",
+  "Quarterly",
+  "Per Season",
+] as const satisfies readonly ReportingFrequency[];
+
+/** A renameable list of approved categories. Finance's category structure comes
+ *  from the workbook and the organisation's chart of accounts, so it is
+ *  editable here rather than compiled in - Section 6 and Section 21 both require
+ *  that. */
+function CategoryList({
+  title,
+  description,
+  items,
+  onRename,
+}: {
+  title: string;
+  description: string;
+  items: readonly { label: string }[];
+  onRename: (index: number, label: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-ink-soft/60">{title}</p>
+      <p className="mt-1 text-[11px] text-ink-soft/40">{description}</p>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item, index) => (
+          <input
+            key={`${item.label}-${index}`}
+            className="rounded-xl border border-ink/10 bg-white px-3 py-1.5 text-xs text-ink"
+            value={item.label}
+            onChange={(e) => onRename(index, e.target.value)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Administration() {
-  const { kpis, updateKpiThresholds, hrConfig, updateHrConfig, auditLog } = useDataStore();
+  const { kpis, updateKpiThresholds, hrConfig, updateHrConfig, financeConfig, updateFinanceConfig, auditLog } =
+    useDataStore();
   const [kpiDeptFilter, setKpiDeptFilter] = useState<Department | "all">("all");
   const toast = useToast();
   // Threshold inputs fire onChange per keystroke (so live cross-role display
@@ -298,6 +344,134 @@ export function Administration() {
               </span>
             </label>
           </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
+          Finance Configuration{" "}
+          <span className="normal-case text-ink-soft/40">
+            - the conventions Finance decides, rather than the application assuming
+          </span>
+        </h2>
+        <div className="card-surface flex flex-col gap-5 rounded-3xl border border-ink/10 p-6 shadow-sm">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <label className="flex max-w-sm flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Finance reporting frequency</span>
+              <select
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={financeConfig.reportingFrequency}
+                onChange={(e) =>
+                  updateFinanceConfig({
+                    reportingFrequency: e.target.value as typeof financeConfig.reportingFrequency,
+                  })
+                }
+              >
+                {FINANCE_FREQUENCY_OPTIONS.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] text-ink-soft/40">
+                Drives the calculated next submission date for every Finance cycle. Monthly is the proposed
+                default (Finance spec Section 4).
+              </span>
+            </label>
+
+            <label className="flex max-w-[120px] flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Currency symbol</span>
+              <input
+                type="text"
+                maxLength={3}
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={financeConfig.currencySymbol}
+                onChange={(e) => updateFinanceConfig({ currencySymbol: e.target.value })}
+              />
+              <span className="text-[11px] text-ink-soft/40">
+                Display only. Every amount is entered and stored as a plain number, so changing this changes
+                presentation and never the figures (Finance spec Section 11).
+              </span>
+            </label>
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={financeConfig.committedCountsAgainstBudget}
+                onChange={(e) => updateFinanceConfig({ committedCountsAgainstBudget: e.target.checked })}
+                className="mt-1 h-4 w-4 rounded border-ink/20 accent-ink"
+              />
+              <span>
+                <span className="text-sm font-semibold text-ink">
+                  Committed expenditure reduces remaining budget
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-ink-soft/50">
+                  The Budget Monitor workbook has not yet confirmed which convention it uses. This must be set to
+                  match it exactly, because the remaining-budget formula is the workbook&apos;s approved
+                  calculation and must be preserved rather than replaced (Finance spec Section 13). Until then the
+                  conservative reading is used and recorded as an explicit decision, not an assumption.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <CategoryList
+            title="Approved revenue categories"
+            description="Section 6 requires these to come from the organisation's approved category structure rather than being hard-coded. The kind drives the Executive roll-up: donor and funder lines feed Executive Donor Funding."
+            items={financeConfig.revenueCategories}
+            onRename={(index, label) =>
+              updateFinanceConfig({
+                revenueCategories: financeConfig.revenueCategories.map((c, i) =>
+                  i === index ? { ...c, label } : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved operating expense categories"
+            description="Section 21 - the expense structure Finance reports against. Labels are editable; the identity of each category is preserved."
+            items={financeConfig.expenseCategories.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateFinanceConfig({
+                expenseCategories: financeConfig.expenseCategories.map((c, i) => (i === index ? label : c)),
+              })
+            }
+          />
+
+          <div>
+            <p className="text-xs font-semibold text-ink-soft/60">Ageing buckets (days overdue)</p>
+            <p className="mt-1 text-[11px] text-ink-soft/40">
+              Sections 15 and 18 permit configurable ageing periods where the Finance policy differs. The engine
+              reads whatever boundaries are set here; the 90-day warning follows the deepest bucket if no 90-day
+              line exists.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {financeConfig.ageingBuckets.map((bucket, index) => (
+                <label key={bucket.label} className="flex items-center gap-2 rounded-xl bg-white px-3 py-1.5">
+                  <span className="text-xs text-ink-soft/60">{bucket.label}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    className="w-20 rounded-lg border border-ink/10 bg-white px-2 py-1 text-xs text-ink"
+                    value={bucket.from}
+                    onChange={(e) =>
+                      updateFinanceConfig({
+                        ageingBuckets: financeConfig.ageingBuckets.map((b, i) =>
+                          i === index ? { ...b, from: Number(e.target.value) } : b
+                        ),
+                      })
+                    }
+                  />
+                  <span className="text-[11px] text-ink-soft/35">days and beyond</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <FinanceWorkbookDependencyNotice dependency={FINANCE_WORKBOOK_DEPENDENCY} />
         </div>
       </section>
 

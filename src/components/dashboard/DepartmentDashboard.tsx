@@ -11,6 +11,7 @@ import { DataFreshnessTag } from "../common/DataFreshnessTag";
 import { formatValue, getStatus } from "../../data/kpiEngine";
 import { SubmitDataModal } from "./SubmitDataModal";
 import { HrSubmitDataModal } from "./HrSubmitDataModal";
+import { FinanceSubmitDataModal } from "./FinanceSubmitDataModal";
 
 export function DepartmentDashboard({
   department,
@@ -25,6 +26,12 @@ export function DepartmentDashboard({
   // its KPIs are derived from underlying records, so typing the percentages
   // directly would bypass the engine entirely (HR spec Sections 1, 10, 11).
   const usesHrSubmission = department === "Human Resources";
+  // Finance reports the same way HR does, and for the same structural reason:
+  // its KPIs are derived from underlying records (revenue lines, cash flows,
+  // budget lines, debtor and creditor invoices), so typing the percentages
+  // directly would bypass the engine and create a second, divergent set of
+  // financial rules (Finance spec Sections 5, 39).
+  const usesFinanceSubmission = department === "Finance";
   const kpis = allKpis.filter((k) => k.department === department);
   const allDeptRisks = allRisks.filter((r) => r.department === department);
   const risks = allDeptRisks.filter((r) => r.status !== "Resolved");
@@ -71,7 +78,11 @@ export function DepartmentDashboard({
             onClick={() => setModalOpen(true)}
             className="whitespace-nowrap rounded-full bg-ink px-7 py-2 text-sm font-semibold text-butter hover:bg-ink-soft"
           >
-            {usesHrSubmission ? "Submit HR Data" : "Submit Data"}
+            {usesHrSubmission
+              ? "Submit HR Data"
+              : usesFinanceSubmission
+                ? "Submit Finance Data"
+                : "Submit Data"}
           </button>
         </div>
       </div>
@@ -251,8 +262,13 @@ export function DepartmentDashboard({
         </div>
       </section>
 
+      {/* Only one modal is mounted per department: the flat KPI form must never
+          be reachable for a department whose KPIs are derived, or Finance
+          figures could be typed straight into the KPIs and bypass the engine. */}
       {usesHrSubmission ? (
         <HrSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      ) : usesFinanceSubmission ? (
+        <FinanceSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : (
         <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
       )}

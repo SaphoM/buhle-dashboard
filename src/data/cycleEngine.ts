@@ -56,12 +56,54 @@ const FREQUENCY_DAYS: Partial<Record<ReportingFrequency, number>> = {
   "Annually After Graduation": 365,
 };
 
+/**
+ * Calendar-based frequencies advance by whole months rather than by a fixed
+ * number of days. A monthly cycle due on the 5th is next due on the 5th; adding
+ * 30 days instead lands on the 4th and then the 3rd, so the date Finance is
+ * told to work to quietly drifts earlier every month.
+ */
+const CALENDAR_MONTHS: Partial<Record<ReportingFrequency, number>> = {
+  Monthly: 1,
+  Quarterly: 3,
+  Annually: 12,
+  "Annually After Graduation": 12,
+};
+
+/**
+ * Reads a stored YYYY-MM-DD as a LOCAL calendar date. `new Date("2026-10-05")`
+ * is UTC midnight, which is the 4th anywhere west of Greenwich - so reading the
+ * day back out of local parts, or adding a month to it, can shift the date.
+ */
+function parseIsoDate(iso: string): Date {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!parts) return new Date(iso);
+  return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]));
+}
+
+function toIsoDate(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 export function computeNextDueDate(cycle: DataCollectionCycle): string {
-  const due = new Date(cycle.dueDate);
-  const start = new Date(cycle.startDate);
+  const due = parseIsoDate(cycle.dueDate);
+  const start = parseIsoDate(cycle.startDate);
+  const months = CALENDAR_MONTHS[cycle.frequency];
+
+  if (months !== undefined) {
+    const day = due.getDate();
+    const next = new Date(due.getTime());
+    next.setMonth(next.getMonth() + months);
+    // setMonth overflows past the end of a short month (31 January + 1 month =
+    // 3 March), so clamp to the last day of the month actually reached.
+    if (next.getDate() < day) next.setDate(0);
+    return toIsoDate(next);
+  }
+
   const intervalDays = FREQUENCY_DAYS[cycle.frequency] ?? Math.max(1, Math.round((due.getTime() - start.getTime()) / 86400000));
   const next = new Date(due.getTime() + intervalDays * 86400000);
-  return next.toISOString().slice(0, 10);
+  return toIsoDate(next);
 }
 
 const MONTH_NAMES = [
