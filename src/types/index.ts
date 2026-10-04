@@ -65,7 +65,10 @@ export interface Kpi {
   // if true, lower values are better (e.g. dropout rate, mortality rate)
   lowerIsBetter?: boolean;
   history: { period: string; value: number }[];
-  measurementFrequency: "weekly" | "monthly" | "termly" | "quarterly";
+  // Commercial Farming genuinely reports per season, which is neither a term nor
+// a quarter, so the cadence is stated honestly rather than forced into the
+// nearest wrong option.
+measurementFrequency: "weekly" | "monthly" | "termly" | "quarterly" | "seasonly";
   owner: string;
   insight: string; // rule-based, plain-language explanation - NOT AI-generated
   // Set to false when the department has no system/process capable of

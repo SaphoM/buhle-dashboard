@@ -23,6 +23,10 @@ import type { OperationsConfig, OperationsReport, OperationsSectionKey } from ".
 import { computeOperationsKpis, type OperationsComputation } from "./operationsEngine";
 import { validateOperationsReport } from "./operationsValidation";
 import { DEFAULT_OPERATIONS_CONFIG, OPERATIONS_SUBMISSION_KPIS } from "./operationsSeed";
+import type { FarmingConfig, FarmingReport, FarmingSectionKey } from "../types/farming";
+import { computeFarmingKpis, type FarmingComputation } from "./farmingEngine";
+import { validateFarmingReport } from "./farmingValidation";
+import { DEFAULT_FARMING_CONFIG, FARMING_SUBMISSION_KPIS } from "./farmingSeed";
 
 // The HR submission owns four KPIs that predate it in name only - they become
 // reportable the moment HR submits the underlying records. Finance is the
@@ -91,6 +95,8 @@ export interface DataStoreValue {
   /** Operations submissions, one per reporting cycle (Section 6 and the seven
    *  reporting areas that follow it). */
   operationsReports: OperationsReport[];
+  /** Commercial Farming register submissions, one per reporting cycle. */
+  farmingReports: FarmingReport[];
   /** Employee registry - the single source for employee identity (Section 26). */
   employees: Employee[];
   /** Append-only record of every consequential change (Section 19, step 12). */
@@ -102,6 +108,12 @@ export interface DataStoreValue {
   /** Approved Operations vocabularies and cadence. Every vocabulary the
    *  validation and the import check against is configured, not hard-coded. */
   operationsConfig: OperationsConfig;
+  /** Commercial Farming: approved crops, plots, livestock categories, mortality
+   *  causes, diseases, water sources, sales channels, cost categories and cost
+   *  centres, plus the reporting cadence and the currency revenue is shown in.
+   *  Validation checks every vocabulary against these, so a record cannot name a
+   *  category that this season's configuration does not carry. */
+  farmingConfig: FarmingConfig;
   /**
    * Records values for one or more KPIs in a single atomic step - clears
    * "no data", shifts history forward, then reacts: creates/escalates/
@@ -185,6 +197,33 @@ export interface DataStoreValue {
       }
     | { ok: false; issues: ReturnType<typeof validateOperationsReport>["issues"] }
   >;
+  /** Applies Commercial Farming configuration: cadence, currency and every
+   *  approved vocabulary the validation checks against. A cadence change moves
+   *  the open Commercial Farming cycle with it, as it does for every other
+   *  department. */
+  updateFarmingConfig: (updates: Partial<FarmingConfig>) => void;
+  /** Saves Commercial Farming register progress without submitting, and without
+   *  touching KPIs or Early Warning. */
+  saveFarmingDraft: (report: FarmingReport, actor: string) => void;
+  /** The full Commercial Farming chain, identical in shape to Operations:
+   *  validate -> save -> calculate KPIs -> RAG -> evaluate EWS -> create/update
+   *  risks -> open the next cycle -> audit. Nothing is derived before validation
+   *  passes, and a KPI the registers cannot produce is marked not derivable
+   *  rather than left showing the previous season's figure. */
+  submitFarmingReport: (
+    report: FarmingReport,
+    submittedBy: string,
+    nextDueDateOverride?: string
+  ) => Promise<
+    | {
+        ok: true;
+        alerts: EwsAlert[];
+        computation: FarmingComputation;
+        nextDueDate?: string;
+        nextReportingPeriod?: string;
+      }
+    | { ok: false; issues: ReturnType<typeof validateFarmingReport>["issues"] }
+  >;
   saveFinanceDraft: (report: FinanceReport, actor: string) => void;
   /**
    * Records a workbook import against a Finance report (Section 26). Kept
@@ -242,20 +281,26 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [hrConfig, setHrConfig] = useState<HrConfig>(DEFAULT_HR_CONFIG);
   const [financeConfig, setFinanceConfig] = useState<FinanceConfig>(DEFAULT_FINANCE_CONFIG);
   const [operationsConfig, setOperationsConfig] = useState<OperationsConfig>(DEFAULT_OPERATIONS_CONFIG);
+  const [farmingConfig, setFarmingConfig] = useState<FarmingConfig>(DEFAULT_FARMING_CONFIG);
   const [kpis, setKpis] = useState<Kpi[]>(() =>
     // Section 8/9: the Staff Performance KPI's availability is driven by the
     // HR configuration switch, not hard-coded, so the toggle in Administration
     // is immediately true everywhere rather than only inside the modal.
-    INITIAL_KPIS.map((kpi) =>
-      kpi.id === HR_KPI_IDS.performance
-        ? {
-            ...kpi,
-            dataAvailable: false,
-            notAvailableReason: DEFAULT_HR_CONFIG.performanceManagementActive
-              ? undefined
-              : PERFORMANCE_UNAVAILABLE_REASON,
-          }
-        : kpi
+    // Commercial Farming's derived KPIs are appended to the seeded list, with the
+    // two that already exist (farm revenue, mortality) de-duplicated by id: the
+    // same identifier must not appear twice in the store, or the KPI pipeline and
+    // a risk pointing at that id would disagree about which record they mean.
+    [...INITIAL_KPIS, ...FARMING_SUBMISSION_KPIS.filter((fk) => !INITIAL_KPIS.some((k) => k.id === fk.id))].map(
+      (kpi) =>
+        kpi.id === HR_KPI_IDS.performance
+          ? {
+              ...kpi,
+              dataAvailable: false,
+              notAvailableReason: DEFAULT_HR_CONFIG.performanceManagementActive
+                ? undefined
+                : PERFORMANCE_UNAVAILABLE_REASON,
+            }
+          : kpi
     )
   );
   // Section 2/4: reporting frequency is configuration for both HR and Finance,
@@ -266,6 +311,9 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       if (c.cycleId.startsWith("cyc-hr-data-")) return { ...c, frequency: DEFAULT_HR_CONFIG.reportingFrequency };
       if (c.department === "Finance") return { ...c, frequency: DEFAULT_FINANCE_CONFIG.reportingFrequency };
       if (c.department === "Operations") return { ...c, frequency: DEFAULT_OPERATIONS_CONFIG.reportingFrequency };
+      if (c.department === "Commercial Farming") {
+        return { ...c, frequency: DEFAULT_FARMING_CONFIG.reportingFrequency };
+      }
       return c;
     })
   );
@@ -274,6 +322,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [hrReports, setHrReports] = useState<HrReport[]>([]);
   const [financeReports, setFinanceReports] = useState<FinanceReport[]>([]);
   const [operationsReports, setOperationsReports] = useState<OperationsReport[]>([]);
+  const [farmingReports, setFarmingReports] = useState<FarmingReport[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
 
@@ -450,11 +499,13 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       hrReports,
       financeReports,
       operationsReports,
+      farmingReports,
       employees,
       auditLog,
       hrConfig,
       financeConfig,
       operationsConfig,
+      farmingConfig,
       submitKpiValues: (entries) => {
         // No reporting period is claimed here: this path has no report behind
         // it, so guessing one would attach the wrong period to any risk it
@@ -865,6 +916,132 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           nextReportingPeriod: cycleRun.nextReportingPeriod,
         };
       },
+      updateFarmingConfig: (updates: Partial<FarmingConfig>) => {
+        setFarmingConfig((prev) => ({ ...prev, ...updates }));
+
+        // The cadence is configuration, so the open Commercial Farming cycle
+        // takes the new cadence with it rather than keeping the seeded one.
+        if (updates.reportingFrequency) {
+          const frequency = updates.reportingFrequency;
+          setCycles((prev) =>
+            prev.map((c) =>
+              c.department === "Commercial Farming" && !["Closed", "Accepted"].includes(c.status)
+                ? { ...c, frequency }
+                : c
+            )
+          );
+        }
+
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            "Administrator",
+            "farming_config_updated",
+            "Commercial Farming",
+            `Commercial Farming configuration updated: ${Object.keys(updates).join(", ")}.`,
+            Object.fromEntries(
+              Object.entries(updates).map(([k, v]) => [
+                k,
+                Array.isArray(v) ? v.join(", ") || "(emptied)" : String(v),
+              ])
+            )
+          ),
+        ]);
+      },
+      saveFarmingDraft: (report, actor) => {
+        const stamped: FarmingReport = { ...report, status: "Draft", savedAt: new Date().toISOString() };
+        setFarmingReports((prev) => [...prev.filter((r) => r.id !== report.id), stamped]);
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            actor,
+            "farming_draft_saved",
+            "Commercial Farming",
+            `Draft saved for ${report.reportingPeriod}.`,
+            { reportId: report.id, cycleId: report.cycleId }
+          ),
+        ]);
+      },
+      submitFarmingReport: async (report, submittedBy, nextDueDateOverride) => {
+        // Step 1: VALIDATE. Refusal, not acceptance-with-caveats: a half-filled
+        // farm register that looks submitted is exactly the failure this guards,
+        // because every farm KPI is derived from these rows.
+        const validation = validateFarmingReport(report, { config: farmingConfig });
+        if (!validation.valid) {
+          return { ok: false, issues: validation.issues };
+        }
+
+        const now = new Date().toISOString();
+        const submitted: FarmingReport = {
+          ...report,
+          status: "Submitted",
+          submittedAt: now,
+          submittedBy,
+          savedAt: undefined,
+          // Every farm figure this cycle came from a person typing, so the
+          // provenance says so rather than implying a system feed.
+          dataSource: { ...report.dataSource, kind: "Manual Entry" },
+        };
+
+        // Steps 2-4: SAVE, then CALCULATE. This is the only place Commercial
+        // Farming KPIs are derived; every other surface reads these values.
+        const computation = computeFarmingKpis(submitted, kpis, farmingConfig);
+        setFarmingReports((prev) => [...prev.filter((r) => r.id !== submitted.id), submitted]);
+
+        // Steps 5-8: the shared pipeline. A KPI the registers could not derive
+        // is cleared rather than left displaying the previous season's figure as
+        // though it described this one, and any risk resting on that stale figure
+        // closes with it.
+        const cleared = clearSkippedKpis(computation.skipped, kpis, risks);
+        const kpiRun = runKpiSubmission(
+          computation.entries,
+          { kpis: cleared.kpis, risks: cleared.risks, actions },
+          submitted.reportingPeriod
+        );
+        setKpis(kpiRun.kpis);
+        setRisks(kpiRun.risks);
+        setActions(kpiRun.actions);
+
+        // Step 9: open the next cycle.
+        const cycleRun = runCycleSubmission(report.cycleId, submittedBy, nextDueDateOverride, cycles);
+        setCycles(cycleRun.cycles);
+
+        // Step 10: AUDIT. Which sections were actually reported is recorded,
+        // because "not applicable" and "complete" are different facts and only
+        // one of them means the farm answered for it.
+        const derivedCount = computation.entries.length;
+        const skippedCount = computation.skipped.length;
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            submittedBy,
+            "farming_report_submitted",
+            "Commercial Farming",
+            `Commercial Farming report submitted for ${report.reportingPeriod}: ${derivedCount} KPI(s) calculated, ${skippedCount} not derivable, source ${submitted.dataSource.kind}.`,
+            {
+              reportId: submitted.id,
+              cycleId: report.cycleId,
+              reportingPeriod: submitted.reportingPeriod,
+              dataSource: submitted.dataSource.kind,
+              kpisCalculated: derivedCount,
+              kpisSkipped: skippedCount,
+              sectionsReported: (Object.entries(validation.bySection) as [FarmingSectionKey, { state: string }][])
+                .filter(([, sec]) => sec.state === "complete")
+                .map(([key]) => key)
+                .join(", "),
+              nextDueDate: cycleRun.nextDueDate ?? null,
+            }
+          ),
+        ]);
+
+        return {
+          ok: true,
+          alerts: kpiRun.alerts,
+          computation,
+          nextDueDate: cycleRun.nextDueDate,
+          nextReportingPeriod: cycleRun.nextReportingPeriod,
+        };
+      },
       saveFinanceDraft: (report, actor) => {
         const stamped: FinanceReport = { ...report, status: "Draft", savedAt: new Date().toISOString() };
         setFinanceReports((prev) => [...prev.filter((r) => r.id !== report.id), stamped]);
@@ -1035,6 +1212,8 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       hrConfig,
       financeConfig,
       operationsConfig,
+      farmingConfig,
+      farmingReports,
     ]
   );
 
