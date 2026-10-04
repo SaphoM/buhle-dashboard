@@ -20,6 +20,8 @@ import { OperationsHealthSummary } from "./operations/OperationsHealthSummary";
 import { MarketingSubmitDataModal } from "./MarketingSubmitDataModal";
 import { FarmingSubmitDataModal } from "./FarmingSubmitDataModal";
 import { FarmingHealthSummary } from "./farming/FarmingHealthSummary";
+import { AlumniSubmitDataModal } from "./AlumniSubmitDataModal";
+import { AlumniHealthSummary } from "./alumni/AlumniHealthSummary";
 import { MarketingHealthSummary } from "./marketing/MarketingHealthSummary";
 
 export function DepartmentDashboard({
@@ -56,6 +58,10 @@ export function DepartmentDashboard({
   // quantities, so the flat KPI form would let someone type a mortality rate or
   // a feed cost ratio that no register supports.
   const usesFarmingSubmission = department === "Commercial Farming";
+  // Alumni is the register department with the widest spread: seven registers,
+  // none of which owns a headline number on its own, because every Alumni figure
+  // is a rate over the graduates who answered rather than a count of something.
+  const usesAlumniSubmission = department === "Alumni";
   const kpis = allKpis.filter((k) => k.department === department);
   const allDeptRisks = allRisks.filter((r) => r.department === department);
   const risks = allDeptRisks.filter((r) => r.status !== "Resolved");
@@ -361,6 +367,12 @@ export function DepartmentDashboard({
           one of them does. */}
       {department === "Commercial Farming" && <FarmingHealthSummary />}
 
+      {/* A tracer study has to lead with the sample, because every figure in it
+          is a rate over the graduates who answered. The cohort block therefore
+          sits above the rates here, and the block reports how many of the seven
+          registers hold rows so a thin study cannot read as a finished one. */}
+      {department === "Alumni" && <AlumniHealthSummary />}
+
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">Key Performance Indicators</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -426,6 +438,8 @@ export function DepartmentDashboard({
         <MarketingSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : usesFarmingSubmission ? (
         <FarmingSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      ) : usesAlumniSubmission ? (
+        <AlumniSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : (
         <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
       )}

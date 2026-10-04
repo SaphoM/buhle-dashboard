@@ -19,6 +19,7 @@ import type {
   PartnershipType,
 } from "../types/marketing";
 import type { FarmingConfig } from "../types/farming";
+import type { AlumniConfig } from "../types/alumni";
 import { FINANCE_WORKBOOK_DEPENDENCY } from "../types/finance";
 import { FinanceWorkbookDependencyNotice } from "../components/dashboard/finance/FinanceSectionChrome";
 import { Tooltip } from "../components/common/Tooltip";
@@ -122,6 +123,13 @@ const OPERATIONS_FREQUENCY_OPTIONS = [
   "Per Batch",
 ] as const satisfies readonly ReportingFrequency[];
 
+/** Tracer studies run against a cohort rather than a calendar period, so the
+ *  options differ from the operational ones. */
+const ALUMNI_FREQUENCY_OPTIONS = [
+  "6 Months After Graduation",
+  "Per Cohort",
+] as const satisfies readonly ReportingFrequency[];
+
 /** A renameable list of approved categories. Finance's category structure comes
  *  from the workbook and the organisation's chart of accounts, so it is
  *  editable here rather than compiled in - Section 6 and Section 21 both require
@@ -169,6 +177,8 @@ export function Administration() {
     updateMarketingConfig,
     farmingConfig,
     updateFarmingConfig,
+    alumniConfig,
+    updateAlumniConfig,
     auditLog,
   } =
     useDataStore();
@@ -1002,6 +1012,262 @@ export function Administration() {
             items={farmingConfig.costCentres.map((label) => ({ label }))}
             onRename={(index, label) =>
               updateFarmingConfig({ costCentres: farmingConfig.costCentres.map((c, i) => (i === index ? label : c)) })
+            }
+          />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
+          Alumni Configuration <span className="normal-case text-ink-soft/40">- who counts, and who may be named</span>
+        </h2>
+        <div className="card-surface flex flex-col gap-5 rounded-3xl border border-ink/10 p-6 shadow-sm">
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <p className="text-sm font-semibold text-ink">Twelve of the thirteen Alumni KPIs have no approved threshold</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-soft/50">
+              Only <span className="font-medium text-ink-soft/70">Alumni Economically Active Rate</span> carries
+              approved limits, because it was already on the dashboard before this tracer study existed. The twelve new
+              figures report <span className="font-medium text-ink-soft/70">Threshold not configured</span> rather than a
+              Green/Amber/Red verdict, because no limit has been approved for an Alumni figure yet. Approving one in the
+              KPI threshold table above switches the Early Warning System on for that figure immediately, with no code
+              change.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <label className="flex max-w-sm flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Alumni reporting frequency</span>
+              <select
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={alumniConfig.reportingFrequency}
+                onChange={(e) =>
+                  updateAlumniConfig({
+                    reportingFrequency: e.target.value as typeof alumniConfig.reportingFrequency,
+                  })
+                }
+              >
+                {ALUMNI_FREQUENCY_OPTIONS.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] text-ink-soft/40">
+                Drives the calculated next submission date for every Alumni cycle. Tracer studies run after graduates
+                have had time to settle, so 6 Months After Graduation is the default rather than a monthly cycle that
+                would re-ask the same people about the same placement.
+              </span>
+            </label>
+
+            <label className="flex max-w-[120px] flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Currency symbol</span>
+              <input
+                type="text"
+                maxLength={3}
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={alumniConfig.currencySymbol}
+                onChange={(e) => updateAlumniConfig({ currencySymbol: e.target.value })}
+              />
+              <span className="text-[11px] text-ink-soft/40">
+                Display only, for market revenue and loan balances. Every amount is stored as a plain number, so
+                changing this changes presentation and never the figures.
+              </span>
+            </label>
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <p className="text-sm font-semibold text-ink">Which statuses count as economically active</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-soft/50">
+              The headline Alumni rate counts anyone in an approved active status, so adding a status to the employment
+              list immediately changes the headline figure for every future study.{" "}
+              <span className="font-medium text-ink-soft/70">Unemployed - seeking</span> and{" "}
+              <span className="font-medium text-ink-soft/70">In further education</span> are recorded states that are
+              deliberately not counted as active, because counting them would let a programme raise its own result by
+              recording graduates who have not started work.{" "}
+              <span className="font-medium text-ink-soft/70">Unknown</span> exists in the vocabulary so somebody who
+              could not be reached has an honest place to be recorded rather than being guessed at.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <p className="text-sm font-semibold text-ink">A thin sample is reported, not refused</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-soft/50">
+              The minimum response rate below is a reporting threshold rather than a KPI threshold: it raises no Early
+              Warning, it decides whether a study is flagged as thin on the dashboard and on the review page. Lowering it
+              makes thin studies read as adequate, so it is set where the department can defend it. A cohort that is hard
+              to reach still gets reported, because that is the cohort whose situation most needs reporting.
+            </p>
+            <label className="mt-3 flex max-w-[160px] flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Minimum response rate</span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={alumniConfig.minimumResponseRatePct}
+                onChange={(e) => updateAlumniConfig({ minimumResponseRatePct: Number(e.target.value) })}
+              />
+              <span className="text-[11px] text-ink-soft/40">
+                Percent of the cohort that has to be traced before a study is treated as representative. Studies below
+                this are flagged, not blocked.
+              </span>
+            </label>
+          </div>
+
+          <CategoryList
+            title="Approved employment statuses"
+            description="What a traced graduate is doing. The headline economically active rate is derived from this list, so editing it changes what counts as active."
+            items={alumniConfig.employmentStatuses.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                employmentStatuses: alumniConfig.employmentStatuses.map((c, i) =>
+                  i === index ? (label as AlumniConfig["employmentStatuses"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved tracing methods"
+            description="How a graduate was reached. Recorded because the method changes who is easy to find, which is exactly the bias a tracer study has to disclose."
+            items={alumniConfig.tracingMethods.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                tracingMethods: alumniConfig.tracingMethods.map((c, i) =>
+                  i === index ? (label as AlumniConfig["tracingMethods"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved business sectors"
+            description="What sector a traced business operates in, which is what makes the survival rate comparable between cohorts."
+            items={alumniConfig.businessSectors.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                businessSectors: alumniConfig.businessSectors.map((c, i) =>
+                  i === index ? (label as AlumniConfig["businessSectors"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved crops"
+            description="What is grown on a traced farm. Yield per hectare is only comparable between crops if the crop list is closed."
+            items={alumniConfig.crops.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                crops: alumniConfig.crops.map((c, i) =>
+                  i === index ? (label as AlumniConfig["crops"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved mass units"
+            description="The unit a harvest was weighed in. Recorded as measured and never converted, because a converted total is a claim nobody on the farm can check."
+            items={alumniConfig.massUnits.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                massUnits: alumniConfig.massUnits.map((c, i) =>
+                  i === index ? (label as AlumniConfig["massUnits"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved livestock categories"
+            description="Species groups on a traced farm. Used to separate crop yield from livestock output rather than adding unlike quantities together."
+            items={alumniConfig.livestockCategories.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                livestockCategories: alumniConfig.livestockCategories.map((c, i) =>
+                  i === index ? (label as AlumniConfig["livestockCategories"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved loan statuses"
+            description="Where a loan sits. The repayment rate is derived from this list, and In Arrears is deliberately part of it so arrears are recorded rather than avoided."
+            items={alumniConfig.loanStatuses.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                loanStatuses: alumniConfig.loanStatuses.map((c, i) =>
+                  i === index ? (label as AlumniConfig["loanStatuses"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved referral channels"
+            description="How a referred graduate heard about the programme. A closed list keeps referral conversion comparable between cohorts."
+            items={alumniConfig.referralChannels.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                referralChannels: alumniConfig.referralChannels.map((c, i) =>
+                  i === index ? (label as AlumniConfig["referralChannels"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved referral outcomes"
+            description="What a referral became. Only the enrolled outcomes count in the conversion rate, so this list is a policy decision rather than a label list."
+            items={alumniConfig.referralOutcomes.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                referralOutcomes: alumniConfig.referralOutcomes.map((c, i) =>
+                  i === index ? (label as AlumniConfig["referralOutcomes"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved market types"
+            description="The kind of market a graduate sells through. Market participation counts anyone who sold, so this list decides what counts as participating."
+            items={alumniConfig.marketTypes.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                marketTypes: alumniConfig.marketTypes.map((c, i) =>
+                  i === index ? (label as AlumniConfig["marketTypes"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved sale frequencies"
+            description="How often a graduate sells. Separates a one-off cash sale from a trading business, which are very different claims about market participation."
+            items={alumniConfig.saleFrequencies.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                saleFrequencies: alumniConfig.saleFrequencies.map((c, i) =>
+                  i === index ? (label as AlumniConfig["saleFrequencies"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved engagement activities"
+            description="What counts as staying engaged. The engagement rate is derived from this list, so widening it raises the rate without anybody doing anything."
+            items={alumniConfig.engagementActivities.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateAlumniConfig({
+                engagementActivities: alumniConfig.engagementActivities.map((c, i) =>
+                  i === index ? (label as AlumniConfig["engagementActivities"][number]) : c
+                ),
+              })
             }
           />
         </div>

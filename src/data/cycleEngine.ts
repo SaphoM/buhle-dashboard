@@ -199,6 +199,17 @@ export function getOpenFarmingCycle(
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
 }
 
+export function getOpenAlumniCycle(
+  cycles: DataCollectionCycle[],
+  now: Date = new Date()
+): DataCollectionCycle | undefined {
+  return cycles
+    .filter((c) => c.department === "Alumni")
+    .filter((c) => !["Accepted", "Closed"].includes(getEffectiveStatus(c, now)))
+    .filter((c) => !["Submitted", "Validation Required"].includes(getEffectiveStatus(c, now)))
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+}
+
 export const cycleStatusMeaning: Record<CycleStatus, string> = {
   Upcoming: "Not yet open for entry.",
   Open: "Open for entry - not yet started.",
