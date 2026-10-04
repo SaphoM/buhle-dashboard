@@ -18,6 +18,8 @@ import { FinanceSubmitDataModal } from "./FinanceSubmitDataModal";
 import { OperationsSubmitDataModal } from "./OperationsSubmitDataModal";
 import { OperationsHealthSummary } from "./operations/OperationsHealthSummary";
 import { MarketingSubmitDataModal } from "./MarketingSubmitDataModal";
+import { FarmingSubmitDataModal } from "./FarmingSubmitDataModal";
+import { FarmingHealthSummary } from "./farming/FarmingHealthSummary";
 import { MarketingHealthSummary } from "./marketing/MarketingHealthSummary";
 
 export function DepartmentDashboard({
@@ -49,6 +51,11 @@ export function DepartmentDashboard({
   // the easiest one to type directly, so the flat KPI form would let someone
   // report a rate that no enquiry record supports.
   const usesMarketingSubmission = department === "Marketing";
+  // Commercial Farming reports the same way, and for the densest version of the
+  // same structural reason: every one of its figures is a ratio of two physical
+  // quantities, so the flat KPI form would let someone type a mortality rate or
+  // a feed cost ratio that no register supports.
+  const usesFarmingSubmission = department === "Commercial Farming";
   const kpis = allKpis.filter((k) => k.department === department);
   const allDeptRisks = allRisks.filter((r) => r.department === department);
   const risks = allDeptRisks.filter((r) => r.status !== "Resolved");
@@ -347,6 +354,13 @@ export function DepartmentDashboard({
           the generic KPI grid cannot tell apart. */}
       {department === "Marketing" && <MarketingHealthSummary />}
 
+      {/* Commercial Farming states its own headline figures, the register each
+          was derived from, and how many of the seven registers hold rows. It
+          also separates "the rate is 0%" from "no rows were recorded", and says
+          which of the eight KPIs carry an approved threshold, because exactly
+          one of them does. */}
+      {department === "Commercial Farming" && <FarmingHealthSummary />}
+
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">Key Performance Indicators</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -410,6 +424,8 @@ export function DepartmentDashboard({
         <OperationsSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : usesMarketingSubmission ? (
         <MarketingSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      ) : usesFarmingSubmission ? (
+        <FarmingSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : (
         <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
       )}

@@ -18,6 +18,7 @@ import type {
   LeadSource,
   PartnershipType,
 } from "../types/marketing";
+import type { FarmingConfig } from "../types/farming";
 import { FINANCE_WORKBOOK_DEPENDENCY } from "../types/finance";
 import { FinanceWorkbookDependencyNotice } from "../components/dashboard/finance/FinanceSectionChrome";
 import { Tooltip } from "../components/common/Tooltip";
@@ -166,6 +167,8 @@ export function Administration() {
     updateOperationsConfig,
     marketingConfig,
     updateMarketingConfig,
+    farmingConfig,
+    updateFarmingConfig,
     auditLog,
   } =
     useDataStore();
@@ -808,6 +811,197 @@ export function Administration() {
               updateMarketingConfig({
                 provinces: marketingConfig.provinces.map((c, i) => (i === index ? label : c)),
               })
+            }
+          />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
+          Commercial Farming Configuration{" "}
+          <span className="normal-case text-ink-soft/40">- what counts, and what may be named</span>
+        </h2>
+        <div className="card-surface flex flex-col gap-5 rounded-3xl border border-ink/10 p-6 shadow-sm">
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <p className="text-sm font-semibold text-ink">Seven of the nine Farming figures have no approved threshold</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-soft/50">
+              Only <span className="font-medium text-ink-soft/70">Livestock Mortality Rate</span> carries confirmed
+              limits, because a Board-level escalation is open against it and the limits that triggered it must survive.
+              <span className="font-medium text-ink-soft/70"> Commercial Farm Revenue</span> carries a proposed target
+              only. The remaining figures report{" "}
+              <span className="font-medium text-ink-soft/70">Threshold not configured</span> rather than a
+              Green/Amber/Red verdict, because no limit has been approved for a farming figure yet. Approving one in the
+              KPI threshold table above switches the Early Warning System on for that figure immediately, with no code
+              change.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <label className="flex max-w-sm flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Farming reporting frequency</span>
+              <select
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={farmingConfig.reportingFrequency}
+                onChange={(e) =>
+                  updateFarmingConfig({
+                    reportingFrequency: e.target.value as typeof farmingConfig.reportingFrequency,
+                  })
+                }
+              >
+                {OPERATIONS_FREQUENCY_OPTIONS.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] text-ink-soft/40">
+                Drives the calculated next submission date for every Farming cycle. Per Season is the default, because a
+                crop cycle and a livestock cycle are both seasonal: a monthly cycle would report the same standing herd
+                and the same standing water meter reading twelve times and make them look like they moved.
+              </span>
+            </label>
+
+            <label className="flex max-w-[120px] flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Currency symbol</span>
+              <input
+                type="text"
+                maxLength={3}
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={farmingConfig.currencySymbol}
+                onChange={(e) => updateFarmingConfig({ currencySymbol: e.target.value })}
+              />
+              <span className="text-[11px] text-ink-soft/40">
+                Display only, for sales value and cost lines. Every amount is stored as a plain number, so changing
+                this changes presentation and never the figures.
+              </span>
+            </label>
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <p className="text-sm font-semibold text-ink">Whether suspected deaths count is a policy decision</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-soft/50">
+              The mortality rate is deaths over stock on hand, and a suspected or disputed death moves it materially.
+              Switching this on includes every recorded death in the rate; switched off, only deaths marked confirmed for
+              the rate are counted, and the rest stay on the register as a record without inflating the figure the
+              Board sees. Individual records can always be excluded regardless of this setting.
+            </p>
+            <label className="mt-3 flex max-w-sm flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Count suspected deaths in the mortality rate</span>
+              <select
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={farmingConfig.mortalityCountsSuspected ? "yes" : "no"}
+                onChange={(e) => updateFarmingConfig({ mortalityCountsSuspected: e.target.value === "yes" })}
+              >
+                <option value="no">No, confirmed deaths only</option>
+                <option value="yes">Yes, include suspected deaths</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <p className="text-sm font-semibold text-ink">An empty register is a gap, never a completed section</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-soft/50">
+              All seven Farming registers are typed in, so a submission with nothing in a register would otherwise
+              validate as finished and report every figure as no data. Each register therefore has to hold at least one
+              row, or be explicitly marked Not Applicable. A month with genuinely no disease is recorded as Not
+              Applicable, which is a deliberate exclusion rather than missing evidence, and the two are never conflated.
+            </p>
+          </div>
+
+          <CategoryList
+            title="Approved crops and enterprises"
+            description="What is grown on the farm. Drives the per-crop production breakdown, so it is a closed list rather than free text."
+            items={farmingConfig.crops.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateFarmingConfig({ crops: farmingConfig.crops.map((c, i) => (i === index ? label : c)) })
+            }
+          />
+
+          <CategoryList
+            title="Approved plots and areas"
+            description="Where a harvest was recorded. Closing this list keeps area figures comparable between seasons."
+            items={farmingConfig.plots.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateFarmingConfig({ plots: farmingConfig.plots.map((c, i) => (i === index ? label : c)) })
+            }
+          />
+
+          <CategoryList
+            title="Approved livestock groups"
+            description="Species groups. The mortality and disease rates are both divided by stock on hand from this list, so a group that changes name changes what the rate is measured against."
+            items={farmingConfig.livestockCategories.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateFarmingConfig({
+                livestockCategories: farmingConfig.livestockCategories.map((c, i) =>
+                  i === index ? (label as FarmingConfig["livestockCategories"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved mortality causes"
+            description="Why an animal died. A closed list so causes aggregate into the same category next season, and so biosecurity reporting stays consistent."
+            items={farmingConfig.mortalityCauses.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateFarmingConfig({
+                mortalityCauses: farmingConfig.mortalityCauses.map((c, i) =>
+                  i === index ? (label as FarmingConfig["mortalityCauses"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved diseases"
+            description="Disease names taken from the veterinary record. Editing this changes what a case counts as in the incidence rate."
+            items={farmingConfig.diseases.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateFarmingConfig({ diseases: farmingConfig.diseases.map((c, i) => (i === index ? label : c)) })
+            }
+          />
+
+          <CategoryList
+            title="Approved water sources"
+            description="Where water was drawn from. Recorded as read on the meter, in the meter's own unit rather than converted."
+            items={farmingConfig.waterSources.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateFarmingConfig({
+                waterSources: farmingConfig.waterSources.map((c, i) =>
+                  i === index ? (label as FarmingConfig["waterSources"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved sales channels"
+            description="Where produce was sold. A closed list so channel revenue is comparable between seasons."
+            items={farmingConfig.salesChannels.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateFarmingConfig({ salesChannels: farmingConfig.salesChannels.map((c, i) => (i === index ? label : c)) })
+            }
+          />
+
+          <CategoryList
+            title="Approved cost categories"
+            description="What the money was spent on. The feed cost ratio is derived from the Feed line in this list, so removing Feed changes what that figure reports."
+            items={farmingConfig.costCategories.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateFarmingConfig({
+                costCategories: farmingConfig.costCategories.map((c, i) =>
+                  i === index ? (label as FarmingConfig["costCategories"][number]) : c
+                ),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved cost centres"
+            description="Which part of the farm carried the cost, so a cost total can be split between crops and livestock."
+            items={farmingConfig.costCentres.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateFarmingConfig({ costCentres: farmingConfig.costCentres.map((c, i) => (i === index ? label : c)) })
             }
           />
         </div>

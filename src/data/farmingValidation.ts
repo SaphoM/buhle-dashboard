@@ -582,6 +582,25 @@ const SECTION_VALIDATORS: Record<
   costs: validateCosts,
 };
 
+function sectionRecordCount(report: FarmingReport, key: FarmingSectionKey): number {
+  switch (key) {
+    case "production":
+      return report.production.records.length;
+    case "livestock":
+      return report.livestock.records.length;
+    case "mortality":
+      return report.mortality.records.length;
+    case "disease":
+      return report.disease.records.length;
+    case "water":
+      return report.water.records.length;
+    case "sales":
+      return report.sales.records.length;
+    case "costs":
+      return report.costs.records.length;
+  }
+}
+
 function isNotApplicable(report: FarmingReport, key: FarmingSectionKey): boolean {
   switch (key) {
     case "production":
@@ -609,8 +628,28 @@ export function validateFarmingReport(
 
   FARMING_SECTION_KEYS.forEach((key) => {
     const issues = SECTION_VALIDATORS[key](report, options);
+    const notApplicable = isNotApplicable(report, key);
+
+    // An empty register is NOT a completed section.
+    //
+    // Without this, a report with nothing typed into any of the seven registers
+    // validates clean and the progress strip reads "7 / 7 sections completed",
+    // while every derived KPI reports no data. That is the single most
+    // misleading state this workflow could present: it looks finished and
+    // evidences nothing. A register with no rows is a gap, so it blocks, and
+    // the only way to clear it honestly is to enter rows or mark the register
+    // Not Applicable.
+    if (!notApplicable && sectionRecordCount(report, key) === 0) {
+      issues.push({
+        section: key,
+        field: FARMING_SECTION_LABELS[key],
+        message: `No rows in the ${FARMING_SECTION_LABELS[key].toLowerCase()} register. Add at least one row, or mark it Not Applicable if it genuinely does not apply this period.`,
+        kind: "missing",
+      });
+    }
+
     bySection[key] = {
-      state: issues.length > 0 ? "incomplete" : isNotApplicable(report, key) ? "not_applicable" : "complete",
+      state: issues.length > 0 ? "incomplete" : notApplicable ? "not_applicable" : "complete",
       issues,
     };
   });
