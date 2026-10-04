@@ -95,6 +95,30 @@ describe("MiniBarTrend", () => {
     expect(plain(pinned[0].textContent)).toContain("R140 000");
   });
 
+  it("keeps each column filling its slot rather than shrinking to its label", () => {
+    const { container } = render(<MiniBarTrend data={DATA} format={rand} />);
+
+    // jsdom performs no layout, so bar widths cannot be measured here. What can
+    // be pinned is the cause of a real regression: the tip wrapper is
+    // inline-flex by default, so without flex-1 on the wrapper and w-full on the
+    // trigger, both size to their own content and every bar renders at roughly
+    // the width of its period label instead of filling its column. These two
+    // classes are the whole difference between the original bar width and the
+    // shrunken one.
+    const wrappers = container.querySelectorAll<HTMLElement>(".group\\/tip");
+    expect(wrappers).toHaveLength(DATA.length);
+    for (const w of wrappers) {
+      expect(w.className).toContain("flex-1");
+      expect(w.className).toContain("min-w-0");
+    }
+
+    const triggers = container.querySelectorAll<HTMLElement>("[tabindex=\"0\"]");
+    expect(triggers).toHaveLength(DATA.length);
+    for (const t of triggers) {
+      expect(t.className).toContain("w-full");
+    }
+  });
+
   it("keeps the bar height independent of the tip", () => {
     const { container } = render(<MiniBarTrend data={DATA} format={rand} />);
 

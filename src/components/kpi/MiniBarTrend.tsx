@@ -54,6 +54,11 @@ export function MiniBarTrend({
             key={d.period}
             align={align}
             bubbleWidth="w-max"
+            // Without these the column loses flex-1 and both spans size to their
+            // content, so the bar renders at the width of its period label
+            // instead of filling its slot.
+            wrapperClassName="min-w-0 flex-1"
+            triggerClassName="w-full"
             label={`${d.period}: ${show(d.value)}`}
             content={
               <span className="flex flex-col gap-0.5">

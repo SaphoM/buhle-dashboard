@@ -41,6 +41,8 @@ export function Tooltip({
   label,
   align = "center",
   bubbleWidth = "w-64",
+  wrapperClassName,
+  triggerClassName,
 }: {
   children: ReactNode;
   /** Bubble body. `text` is the older string-only spelling, still used by the
@@ -50,6 +52,13 @@ export function Tooltip({
   label?: string;
   align?: "center" | "left" | "right";
   bubbleWidth?: string;
+  /** Extra classes for the outer span. Needed whenever the tip wraps something
+   *  that has to fill a flex or grid slot: the default root is inline-flex,
+   *  which is sized by its content, so a bar column wrapped in it collapses to
+   *  the width of its own label instead of filling the column it sits in. */
+  wrapperClassName?: string;
+  /** Extra classes for the focusable trigger inside the root. */
+  triggerClassName?: string;
 }) {
   const [pinned, setPinned] = useState(false);
   const id = useId();
@@ -94,14 +103,14 @@ export function Tooltip({
         : "left-1/2 top-full -translate-x-1/2 -translate-y-1/2 rotate-45";
 
   return (
-    <span ref={rootRef} className="group/tip relative inline-flex">
+    <span ref={rootRef} className={`group/tip relative inline-flex ${wrapperClassName ?? ""}`}>
       <span
         tabIndex={0}
         role={label ? "img" : undefined}
         aria-label={label}
         aria-describedby={pinned ? id : undefined}
         onClick={() => setPinned((p) => !p)}
-        className="cursor-help rounded outline-none focus-visible:ring-2 focus-visible:ring-butter-dark focus-visible:ring-offset-1"
+        className={`cursor-help rounded outline-none focus-visible:ring-2 focus-visible:ring-butter-dark focus-visible:ring-offset-1 ${triggerClassName ?? ""}`}
       >
         {children}
       </span>
