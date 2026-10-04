@@ -7,9 +7,11 @@ import { KpiCard } from "../kpi/KpiCard";
 import { FinanceHealthSummary } from "./finance/FinanceHealthSummary";
 import { StatusBadge } from "../kpi/StatusBadge";
 import { CircularRing } from "../kpi/CircularRing";
+import { TipRow, Tooltip } from "../common/Tooltip";
+import type { ReactNode } from "react";
 import { MiniBarTrend } from "../kpi/MiniBarTrend";
 import { DataFreshnessTag } from "../common/DataFreshnessTag";
-import { formatValue, getStatus } from "../../data/kpiEngine";
+import { formatTarget, formatValue, getStatus } from "../../data/kpiEngine";
 import { SubmitDataModal } from "./SubmitDataModal";
 import { HrSubmitDataModal } from "./HrSubmitDataModal";
 import { FinanceSubmitDataModal } from "./FinanceSubmitDataModal";
@@ -155,15 +157,51 @@ export function DepartmentDashboard({
               )}
             </div>
             <div className="flex items-center gap-8">
-              <BigStat value={`${reportingTotal}/${total}`} label="KPIs reporting" />
-              <BigStat value={criticalRisks.length + emergingRisks.length} label="Active risks" />
+              <BigStat
+                value={`${reportingTotal}/${total}`}
+                label="KPIs reporting"
+                detail={
+                  <span className="flex flex-col gap-1">
+                    <TipRow label="Reporting" value={reportingTotal} />
+                    <TipRow label="Not submitted" value={counts.no_data} />
+                    <TipRow label="No threshold" value={counts.threshold_unset} />
+                  </span>
+                }
+              />
+              <BigStat
+                value={criticalRisks.length + emergingRisks.length}
+                label="Active risks"
+                detail={
+                  <span className="flex flex-col gap-1">
+                    <TipRow label="Critical" value={criticalRisks.length} />
+                    <TipRow label="Emerging" value={emergingRisks.length} />
+                  </span>
+                }
+              />
             </div>
           </div>
 
           {/* Widget row - health ring / primary KPI trend / risk pulse / actions */}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
             <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-ink p-6 text-center shadow-sm">
-              <CircularRing value={score} size={120} stroke={10} label={`${score}`} sublabel="/ 100" />
+              <Tooltip
+                align="right"
+                label={`Department Health: ${score} out of 100`}
+                content={
+                  <span className="flex flex-col gap-1">
+                    <TipRow label="Score" value={`${score} / 100`} />
+                    <TipRow label="Scored KPIs" value={reportingTotal} />
+                    <TipRow label="On target" value={counts.green} />
+                    <TipRow label="Emerging" value={counts.amber} />
+                    <TipRow label="Critical" value={counts.red} />
+                    <span className="mt-1 block opacity-70">
+                      Weighted 100 / 55 / 10 over KPIs that carry a verdict.
+                    </span>
+                  </span>
+                }
+              >
+                <CircularRing value={score} size={120} stroke={10} label={`${score}`} sublabel="/ 100" />
+              </Tooltip>
               <div>
                 <p className="text-sm font-semibold text-white">Department Health</p>
                 <p className="text-xs text-white/50">
@@ -177,9 +215,27 @@ export function DepartmentDashboard({
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-medium text-ink-soft/60">{spotlightKpi.name}</p>
-                    <p className="mt-1 text-2xl font-bold text-ink">
-                      {spotlightKpi.dataAvailable === false ? "No data" : formatValue(spotlightKpi)}
-                    </p>
+                    <Tooltip
+                      align="right"
+                      label={`${spotlightKpi.name}: ${formatValue(spotlightKpi)}`}
+                      content={
+                        <span className="flex flex-col gap-1">
+                          <TipRow label="Exact" value={formatValue(spotlightKpi)} />
+                          <TipRow
+                            label="Previous"
+                            value={formatValue({ ...spotlightKpi, currentValue: spotlightKpi.previousValue })}
+                          />
+                          <TipRow label="Target" value={formatTarget(spotlightKpi)} />
+                          {spotlightKpi.history.map((h) => (
+                            <TipRow key={h.period} label={h.period} value={String(h.value)} />
+                          ))}
+                        </span>
+                      }
+                    >
+                      <p className="mt-1 text-2xl font-bold text-ink">
+                        {spotlightKpi.dataAvailable === false ? "No data" : formatValue(spotlightKpi)}
+                      </p>
+                    </Tooltip>
                   </div>
                 </div>
                 <div className="mt-3">
@@ -199,16 +255,63 @@ export function DepartmentDashboard({
                 <div className="bg-emerald-400" style={{ width: `${total ? (counts.green / total) * 100 : 0}%` }} />
               </div>
               <div className="mt-4 flex justify-between text-xs text-white/60">
-                <span>{criticalRisks.length} Critical</span>
-                <span>{emergingRisks.length} Emerging</span>
-                <span>{counts.green} Stable</span>
+                <Tooltip
+                  align="center"
+                  label={`${criticalRisks.length} critical risks`}
+                  content={
+                    <span className="flex flex-col gap-1">
+                      <TipRow label="Level" value="Critical (red)" />
+                      <TipRow label="Open" value={criticalRisks.length} />
+                    </span>
+                  }
+                >
+                  <span>{criticalRisks.length} Critical</span>
+                </Tooltip>
+                <Tooltip
+                  align="center"
+                  label={`${emergingRisks.length} emerging risks`}
+                  content={
+                    <span className="flex flex-col gap-1">
+                      <TipRow label="Level" value="Emerging (amber)" />
+                      <TipRow label="Open" value={emergingRisks.length} />
+                    </span>
+                  }
+                >
+                  <span>{emergingRisks.length} Emerging</span>
+                </Tooltip>
+                <Tooltip
+                  align="center"
+                  label={`${counts.green} KPIs on target`}
+                  content={
+                    <span className="flex flex-col gap-1">
+                      <TipRow label="Meaning" value="KPIs on target" />
+                      <TipRow label="Count" value={counts.green} />
+                    </span>
+                  }
+                >
+                  {/* Third bar segment counts on-target KPIs, not a third risk
+                      level, so it is labelled as what it counts. */}
+                  <span>{counts.green} on target</span>
+                </Tooltip>
               </div>
             </div>
 
             <div className="card-surface flex flex-col justify-between rounded-3xl border border-ink/10 p-6 shadow-sm">
               <p className="text-sm font-medium text-ink-soft/60">Corrective Actions</p>
               <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-ink">{completedActions}</span>
+                <Tooltip
+                  align="right"
+                  label={`${completedActions} of ${deptActions.length || 0} actions completed`}
+                  content={
+                    <span className="flex flex-col gap-1">
+                      <TipRow label="Completed" value={completedActions} />
+                      <TipRow label="Overdue" value={deptActions.filter((a) => a.status === "Overdue").length} />
+                      <TipRow label="Total" value={deptActions.length || 0} />
+                    </span>
+                  }
+                >
+                  <span className="text-2xl font-bold text-ink">{completedActions}</span>
+                </Tooltip>
                 <span className="text-xs text-ink-soft/50">/ {deptActions.length || 0} completed</span>
               </div>
               <div className="mt-4 h-2 overflow-hidden rounded-full bg-ink/10">
@@ -320,10 +423,26 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BigStat({ value, label }: { value: number | string; label: string }) {
+function BigStat({
+  value,
+  label,
+  detail,
+}: {
+  value: number | string;
+  label: string;
+  detail?: ReactNode;
+}) {
   return (
     <div className="text-right">
-      <div className="text-3xl font-bold text-ink">{value}</div>
+      <div className="text-3xl font-bold text-ink">
+        {detail ? (
+          <Tooltip align="right" label={`${label}: ${value}`} content={detail}>
+            {value}
+          </Tooltip>
+        ) : (
+          value
+        )}
+      </div>
       <div className="text-xs text-ink-soft/50">{label}</div>
     </div>
   );

@@ -3,6 +3,7 @@ import { useDataStore } from "../../../data/DataStoreContext";
 import { FINANCE_KPI_IDS } from "../../../data/financeEngine";
 import { getOpenFinanceCycle } from "../../../data/cycleEngine";
 import { formatTarget, formatValue, getStatus, getVariancePct } from "../../../data/kpiEngine";
+import { KpiFigure } from "../KpiFigure";
 import { StatusBadge } from "../../kpi/StatusBadge";
 import type { Kpi } from "../../../types";
 import type { FinanceReport, ImportRun } from "../../../types/finance";
@@ -121,7 +122,11 @@ export function FinanceHealthSummary() {
                   <th scope="row" className="py-2.5 pr-3 text-left font-medium text-ink">
                     {row.label}
                   </th>
-                  <td className="py-2.5 pr-3 text-right tabular-nums text-ink">{formatValue(kpi)}</td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums text-ink">
+                    <KpiFigure kpi={kpi} format={formatValue}>
+                      {formatValue(kpi)}
+                    </KpiFigure>
+                  </td>
                   <td className="py-2.5 pr-3 text-right tabular-nums text-ink-soft/70">
                     {formatTarget(kpi)}
                   </td>

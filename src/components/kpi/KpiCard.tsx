@@ -2,6 +2,7 @@ import type { Kpi } from "../../types";
 import { formatTarget, formatValue, getStatus, getTrend, getVariancePct } from "../../data/kpiEngine";
 import { StatusBadge } from "./StatusBadge";
 import { Sparkline } from "./Sparkline";
+import { TipRow, Tooltip } from "../common/Tooltip";
 import { Link } from "react-router-dom";
 
 const trendArrow = { up: "▲", down: "▼", flat: "→" };
@@ -59,8 +60,32 @@ export function KpiCard({ kpi, linkTo }: { kpi: Kpi; linkTo?: string }) {
         </div>
       ) : (
         <>
+          {/* The headline figure is the one number on this card a reader will
+              repeat, so it carries the full breakdown in a hover tip: the
+              exact value, both the previous period and the target it is
+              measured against, and where the figure came from. Without that,
+              the card shows a rate or a rounded currency whose denominator
+              nothing on the surface reveals. */}
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-ink">{formatValue(kpi)}</span>
+            <Tooltip
+              align="left"
+              label={`${kpi.name}: ${formatValue(kpi)}. Target ${formatTarget(kpi)}.`}
+              content={
+                <span className="flex flex-col gap-1">
+                  <TipRow label="Current" value={formatValue(kpi)} />
+                  <TipRow label="Target" value={formatTarget(kpi)} />
+                  <TipRow label="Previous" value={formatValue({ ...kpi, currentValue: kpi.previousValue })} />
+                  <TipRow
+                    label="Variance"
+                    value={`${variance > 0 ? "+" : ""}${variance.toFixed(1)}%`}
+                  />
+                  {kpi.sourceSystem ? <TipRow label="Source" value={kpi.sourceSystem} /> : null}
+                  {kpi.lastUpdated ? <TipRow label="Updated" value={formatTimestamp(kpi.lastUpdated)} /> : null}
+                </span>
+              }
+            >
+              <span className="text-3xl font-bold tracking-tight text-ink">{formatValue(kpi)}</span>
+            </Tooltip>
             <span
               className={`text-xs font-semibold ${
                 trend === "flat" ? "text-ink-soft/40" : trendGood ? "text-emerald-600" : "text-rose-500"

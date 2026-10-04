@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Risk } from "../types";
 import { useDataStore } from "../data/DataStoreContext";
 import type { Department, Kpi } from "../types";
@@ -5,9 +6,10 @@ import { KpiCard } from "../components/kpi/KpiCard";
 import { StatusBadge } from "../components/kpi/StatusBadge";
 import { CircularRing } from "../components/kpi/CircularRing";
 import { MiniBarTrend } from "../components/kpi/MiniBarTrend";
-import { getStatus } from "../data/kpiEngine";
+import { formatTarget, formatValue, getStatus } from "../data/kpiEngine";
 import { daysUntilDue, getEffectiveStatus, getSubmissionEwsStatus } from "../data/cycleEngine";
 import { DataFreshnessTag } from "../components/common/DataFreshnessTag";
+import { TipRow, Tooltip } from "../components/common/Tooltip";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
@@ -131,16 +133,70 @@ export function ExecutiveOverview() {
           )}
         </div>
         <div className="flex items-center gap-8">
-          <BigStat value={`${reportingTotal}/${total}`} label="KPIs reporting" />
-          <BigStat value={criticalRisks.length + emergingRisks.length} label="Active risks" />
-          <BigStat value={overdue.length + upcoming.length} label="Actions due" />
+          {/* Each headline count hides its own composition: a reader cannot tell
+              from "3/14 KPIs reporting" whether the missing eleven failed to
+              report or are not reportable at all, and those are opposite
+              problems. The tip spells the split out. */}
+          <BigStat
+            value={`${reportingTotal}/${total}`}
+            label="KPIs reporting"
+            detail={
+              <span className="flex flex-col gap-1">
+                <TipRow label="Reporting" value={reportingTotal} />
+                <TipRow label="Not submitted" value={counts.no_data} />
+                <TipRow label="Not available" value={counts.not_available} />
+                <TipRow label="No threshold" value={counts.threshold_unset} />
+              </span>
+            }
+          />
+          <BigStat
+            value={criticalRisks.length + emergingRisks.length}
+            label="Active risks"
+            detail={
+              <span className="flex flex-col gap-1">
+                <TipRow label="Critical" value={criticalRisks.length} />
+                <TipRow label="Emerging" value={emergingRisks.length} />
+                <TipRow label="Resolved" value={allRisks.filter((r) => r.status === "Resolved").length} />
+              </span>
+            }
+          />
+          <BigStat
+            value={overdue.length + upcoming.length}
+            label="Actions due"
+            detail={
+              <span className="flex flex-col gap-1">
+                <TipRow label="Overdue" value={overdue.length} />
+                <TipRow label="Due within 14 days" value={upcoming.length} />
+                <TipRow label="Completed" value={completedCount} />
+                <TipRow label="Total actions" value={allActions.length} />
+              </span>
+            }
+          />
         </div>
       </div>
 
       {/* Widget row: score ring / revenue trend / risk pulse / action pulse */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
         <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-ink p-6 text-center shadow-sm">
-          <CircularRing value={score} label={`${score}`} sublabel="/ 100" />
+          <Tooltip
+            align="right"
+            label={`Organisational Health: ${score} out of 100`}
+            content={
+              <span className="flex flex-col gap-1">
+                <TipRow label="Score" value={`${score} / 100`} />
+                <TipRow label="Scored KPIs" value={reportingTotal} />
+                <TipRow label="On target" value={counts.green} />
+                <TipRow label="Emerging" value={counts.amber} />
+                <TipRow label="Critical" value={counts.red} />
+                <span className="mt-1 block opacity-70">
+                  Weighted 100 / 55 / 10. A KPI with no approved threshold or no
+                  submission is excluded, not scored as zero.
+                </span>
+              </span>
+            }
+          >
+            <CircularRing value={score} label={`${score}`} sublabel="/ 100" />
+          </Tooltip>
           <div>
             <p className="text-sm font-semibold text-white">Organisational Health</p>
             <p className="text-xs text-white/50">{score >= 75 ? "Healthy" : score >= 55 ? "Needs Attention" : "Critical - Act Now"}</p>
@@ -151,9 +207,30 @@ export function ExecutiveOverview() {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm font-medium text-ink-soft/60">Revenue Trend</p>
-              <p className="mt-1 text-2xl font-bold text-ink">
-                R{(revenueKpi.currentValue / 1000000).toFixed(2)}m
-              </p>
+              {/* The one figure on this page shown in a rounded form: R100.00m
+                  stands for a rand amount. The tip carries the exact figure and
+                  the history behind the bars below it. */}
+              <Tooltip
+                align="right"
+                label={`Revenue Trend: ${formatValue(revenueKpi)}`}
+                content={
+                  <span className="flex flex-col gap-1">
+                    <TipRow label="Exact" value={formatValue(revenueKpi)} />
+                    <TipRow
+                      label="Previous"
+                      value={formatValue({ ...revenueKpi, currentValue: revenueKpi.previousValue })}
+                    />
+                    <TipRow label="Target" value={formatTarget(revenueKpi)} />
+                    {revenueKpi.history.map((h) => (
+                      <TipRow key={h.period} label={h.period} value={`R${h.value.toLocaleString("en-ZA")}`} />
+                    ))}
+                  </span>
+                }
+              >
+                <p className="mt-1 text-2xl font-bold text-ink">
+                  R{(revenueKpi.currentValue / 1000000).toFixed(2)}m
+                </p>
+              </Tooltip>
             </div>
             <Link to="/finance" className="text-xs font-semibold text-ink-soft/50 hover:text-ink">
               View →
@@ -175,16 +252,65 @@ export function ExecutiveOverview() {
             <div className="bg-emerald-400" style={{ width: `${(counts.green / total) * 100}%` }} />
           </div>
           <div className="mt-4 flex justify-between text-xs text-white/60">
-            <span>{criticalRisks.length} Critical</span>
-            <span>{emergingRisks.length} Emerging</span>
-            <span>{counts.green} Stable</span>
+            <Tooltip
+              align="center"
+              label={`${criticalRisks.length} critical risks`}
+              content={
+                <span className="flex flex-col gap-1">
+                  <TipRow label="Level" value="Critical (red)" />
+                  <TipRow label="Open" value={criticalRisks.length} />
+                </span>
+              }
+            >
+              <span>{criticalRisks.length} Critical</span>
+            </Tooltip>
+            <Tooltip
+              align="center"
+              label={`${emergingRisks.length} emerging risks`}
+              content={
+                <span className="flex flex-col gap-1">
+                  <TipRow label="Level" value="Emerging (amber)" />
+                  <TipRow label="Open" value={emergingRisks.length} />
+                </span>
+              }
+            >
+              <span>{emergingRisks.length} Emerging</span>
+            </Tooltip>
+            <Tooltip
+              align="center"
+              label={`${counts.green} KPIs on target`}
+              content={
+                <span className="flex flex-col gap-1">
+                  <TipRow label="Meaning" value="KPIs on target" />
+                  <TipRow label="Count" value={counts.green} />
+                </span>
+              }
+            >
+              {/* The bar's first two segments count risks but its third counts
+                  on-target KPIs, so sitting in a row of risk levels the word
+                  "Stable" reads as a risk level and is not one. */}
+              <span>{counts.green} on target</span>
+            </Tooltip>
           </div>
         </div>
 
         <div className="card-surface flex flex-col justify-between rounded-3xl border border-ink/10 p-6 shadow-sm">
           <p className="text-sm font-medium text-ink-soft/60">Corrective Actions</p>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-ink">{completedCount}</span>
+            <Tooltip
+              align="right"
+              label={`${completedCount} of ${allActions.length} actions completed`}
+              content={
+                <span className="flex flex-col gap-1">
+                  <TipRow label="Completed" value={completedCount} />
+                  <TipRow label="Overdue" value={overdue.length} />
+                  <TipRow label="Due within 14 days" value={upcoming.length} />
+                  <TipRow label="Total" value={allActions.length} />
+                </span>
+              }
+            >
+              <span className="text-2xl font-bold text-ink">{completedCount}</span>
+            </Tooltip>
             <span className="text-xs text-ink-soft/50">/ {allActions.length} completed</span>
           </div>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-ink/10">
@@ -320,10 +446,26 @@ export function ExecutiveOverview() {
   );
 }
 
-function BigStat({ value, label }: { value: number | string; label: string }) {
+function BigStat({
+  value,
+  label,
+  detail,
+}: {
+  value: number | string;
+  label: string;
+  detail?: ReactNode;
+}) {
   return (
     <div className="text-right">
-      <div className="text-3xl font-bold text-ink">{value}</div>
+      <div className="text-3xl font-bold text-ink">
+        {detail ? (
+          <Tooltip align="right" label={`${label}: ${value}`} content={detail}>
+            {value}
+          </Tooltip>
+        ) : (
+          value
+        )}
+      </div>
       <div className="text-xs text-ink-soft/50">{label}</div>
     </div>
   );

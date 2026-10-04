@@ -3,6 +3,7 @@ import { useDataStore } from "../../../data/DataStoreContext";
 import { getOpenOperationsCycle } from "../../../data/cycleEngine";
 import { previewOperationsStatus } from "../../../data/operationsEngine";
 import { formatValue as formatKpiValue } from "../../../data/kpiEngine";
+import { KpiFigure } from "../KpiFigure";
 import { StatusBadge } from "../../kpi/StatusBadge";
 import type { Kpi } from "../../../types";
 import {
@@ -157,9 +158,13 @@ export function OperationsHealthSummary() {
                     )}
                   </th>
                   <td className="py-2.5 pr-3 text-right tabular-nums text-ink">
-                    {kpi.dataAvailable === false
-                      ? "No data"
-                      : formatOperationsValue(kpi, currencySymbol)}
+                    {kpi.dataAvailable === false ? (
+                      "No data"
+                    ) : (
+                      <KpiFigure kpi={kpi} format={(k) => formatOperationsValue(k, currencySymbol)}>
+                        {formatOperationsValue(kpi, currencySymbol)}
+                      </KpiFigure>
+                    )}
                   </td>
                   <td className="py-2.5 pr-3 text-xs text-ink-soft/60">{row.basis}</td>
                   <td className="py-2.5 pr-3 text-right text-xs text-ink-soft/50">
