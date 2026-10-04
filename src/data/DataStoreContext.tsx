@@ -31,6 +31,10 @@ import type { MarketingConfig, MarketingReport, MarketingSectionKey } from "../t
 import { computeMarketingKpis, type MarketingComputation } from "./marketingEngine";
 import { validateMarketingReport } from "./marketingValidation";
 import { DEFAULT_MARKETING_CONFIG, MARKETING_SUBMISSION_KPIS } from "./marketingSeed";
+import type { AlumniConfig, AlumniReport, AlumniSectionKey } from "../types/alumni";
+import { computeAlumniKpis, type AlumniComputation } from "./alumniEngine";
+import { validateAlumniReport } from "./alumniValidation";
+import { ALUMNI_SUBMISSION_KPIS, DEFAULT_ALUMNI_CONFIG } from "./alumniSeed";
 
 // The HR submission owns four KPIs that predate it in name only - they become
 // reportable the moment HR submits the underlying records. Finance is the
@@ -103,6 +107,8 @@ export interface DataStoreValue {
   farmingReports: FarmingReport[];
   /** Marketing register submissions, one per reporting cycle. */
   marketingReports: MarketingReport[];
+  /** Alumni tracer-study submissions, one per reporting cycle. */
+  alumniReports: AlumniReport[];
   /** Employee registry - the single source for employee identity (Section 26). */
   employees: Employee[];
   /** Append-only record of every consequential change (Section 19, step 12). */
@@ -126,6 +132,18 @@ export interface DataStoreValue {
    *  derived from it: adding an outcome there immediately changes what counts as
    *  a conversion, and that is a policy decision rather than a coding one. */
   marketingConfig: MarketingConfig;
+  /** Alumni: the tracer-study cadence, the currency, and every approved
+   *  vocabulary the derived rates are built from - including the employment
+   *  statuses and loan states that define what counts as economically active and
+   *  what counts as repaid. Those two lists are configuration because they decide
+   *  what the headline figures mean: changing one redefines a rate, and that is
+   *  a policy decision rather than a coding one.
+   *
+   *  Also carries `minimumResponseRatePct`, the point below which the department
+   *  must warn that its sample may not represent the cohort. It does not raise an
+   *  Early Warning - it governs how boldly the department may present its own
+   *  numbers. */
+  alumniConfig: AlumniConfig;
   /**
    * Records values for one or more KPIs in a single atomic step - clears
    * "no data", shifts history forward, then reacts: creates/escalates/
@@ -262,6 +280,40 @@ export interface DataStoreValue {
       }
     | { ok: false; issues: ReturnType<typeof validateMarketingReport>["issues"] }
   >;
+  /** Applies Alumni configuration: cadence, currency and every approved
+   *  vocabulary the derived rates depend on. A cadence change moves the open
+   *  Alumni cycle with it, as it does for every other department. */
+  updateAlumniConfig: (updates: Partial<AlumniConfig>) => void;
+  /** Saves Alumni register progress without submitting, and without touching
+   *  KPIs or Early Warning. */
+  saveAlumniDraft: (report: AlumniReport, actor: string) => void;
+  /** The full Alumni chain, identical in shape to the other departments:
+   *  validate -> save -> calculate KPIs -> RAG -> evaluate EWS -> create/update
+   *  risks -> open the next cycle -> audit.
+   *
+   *  One difference: Alumni validation returns two grades of issue, and only the
+   *  BLOCKING ones refuse. Facts the department can only state rather than fix -
+   *  a thin response rate, a loan in arrears - pass through and are carried to
+   *  the review page instead, because refusing them would mean a cohort that is
+   *  hard to reach could never be reported on. */
+  submitAlumniReport: (
+    report: AlumniReport,
+    submittedBy: string,
+    nextDueDateOverride?: string
+  ) => Promise<
+    | {
+        ok: true;
+        alerts: EwsAlert[];
+        computation: AlumniComputation;
+        nextDueDate?: string;
+        nextReportingPeriod?: string;
+      }
+    | {
+        ok: false;
+        issues: ReturnType<typeof validateAlumniReport>["blockingIssues"];
+        attentionIssues: ReturnType<typeof validateAlumniReport>["attentionIssues"];
+      }
+  >;
   saveFinanceDraft: (report: FinanceReport, actor: string) => void;
   /**
    * Records a workbook import against a Finance report (Section 26). Kept
@@ -321,6 +373,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [operationsConfig, setOperationsConfig] = useState<OperationsConfig>(DEFAULT_OPERATIONS_CONFIG);
   const [farmingConfig, setFarmingConfig] = useState<FarmingConfig>(DEFAULT_FARMING_CONFIG);
   const [marketingConfig, setMarketingConfig] = useState<MarketingConfig>(DEFAULT_MARKETING_CONFIG);
+  const [alumniConfig, setAlumniConfig] = useState<AlumniConfig>(DEFAULT_ALUMNI_CONFIG);
   const [kpis, setKpis] = useState<Kpi[]>(() =>
     // Section 8/9: the Staff Performance KPI's availability is driven by the
     // HR configuration switch, not hard-coded, so the toggle in Administration
@@ -333,6 +386,11 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       ...INITIAL_KPIS,
       ...FARMING_SUBMISSION_KPIS.filter((fk) => !INITIAL_KPIS.some((k) => k.id === fk.id)),
       ...MARKETING_SUBMISSION_KPIS.filter((mk) => !INITIAL_KPIS.some((k) => k.id === mk.id)),
+      // `kpi-alumni` already ships in INITIAL_KPIS with approved limits
+      // (green 68 / amber 55), so the id filter keeps the seeded record and
+      // carries its thresholds through. Only the twelve new figures are appended,
+      // and they ship without limits rather than with invented ones.
+      ...ALUMNI_SUBMISSION_KPIS.filter((ak) => !INITIAL_KPIS.some((k) => k.id === ak.id)),
     ].map(
       (kpi) =>
         kpi.id === HR_KPI_IDS.performance
@@ -358,6 +416,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
         return { ...c, frequency: DEFAULT_FARMING_CONFIG.reportingFrequency };
       }
       if (c.department === "Marketing") return { ...c, frequency: DEFAULT_MARKETING_CONFIG.reportingFrequency };
+      if (c.department === "Alumni") return { ...c, frequency: DEFAULT_ALUMNI_CONFIG.reportingFrequency };
       return c;
     })
   );
@@ -368,6 +427,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [operationsReports, setOperationsReports] = useState<OperationsReport[]>([]);
   const [farmingReports, setFarmingReports] = useState<FarmingReport[]>([]);
   const [marketingReports, setMarketingReports] = useState<MarketingReport[]>([]);
+  const [alumniReports, setAlumniReports] = useState<AlumniReport[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
 
@@ -546,6 +606,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       operationsReports,
       farmingReports,
       marketingReports,
+      alumniReports,
       employees,
       auditLog,
       hrConfig,
@@ -553,6 +614,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       operationsConfig,
       farmingConfig,
       marketingConfig,
+      alumniConfig,
       submitKpiValues: (entries) => {
         // No reporting period is claimed here: this path has no report behind
         // it, so guessing one would attach the wrong period to any risk it
@@ -1213,6 +1275,171 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           nextReportingPeriod: cycleRun.nextReportingPeriod,
         };
       },
+      updateAlumniConfig: (updates: Partial<AlumniConfig>) => {
+        setAlumniConfig((prev) => ({ ...prev, ...updates }));
+
+        // The cadence is configuration, so the open Alumni cycle takes the new
+        // cadence with it rather than keeping the seeded one. The tracer-study
+        // cadence matters more here than elsewhere: it is what decides how long
+        // after graduation a graduate is asked how they are doing.
+        if (updates.reportingFrequency) {
+          const frequency = updates.reportingFrequency;
+          setCycles((prev) =>
+            prev.map((c) =>
+              c.department === "Alumni" && !["Closed", "Accepted"].includes(c.status) ? { ...c, frequency } : c
+            )
+          );
+        }
+
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            "Administrator",
+            "alumni_config_updated",
+            "Alumni",
+            // The employment and loan lists are named explicitly, because
+            // changing one of those changes what the headline rates MEAN rather
+            // than merely how they are labelled.
+            Object.keys(updates).includes("employmentStatuses") ||
+            Object.keys(updates).includes("loanStatuses")
+              ? `Alumni configuration updated: ${Object.keys(updates).join(", ")}. The approved employment and loan states define the economically active rate and the repayment rate, so every Alumni rate for this period now rests on the revised lists.`
+              : `Alumni configuration updated: ${Object.keys(updates).join(", ")}.`,
+            Object.fromEntries(
+              Object.entries(updates).map(([k, v]) => [
+                k,
+                Array.isArray(v) ? v.join(", ") || "(emptied)" : String(v),
+              ])
+            )
+          ),
+        ]);
+      },
+      saveAlumniDraft: (report, actor) => {
+        const stamped: AlumniReport = { ...report, status: "Draft", savedAt: new Date().toISOString() };
+        setAlumniReports((prev) => [...prev.filter((r) => r.id !== report.id), stamped]);
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(actor, "alumni_draft_saved", "Alumni", `Draft saved for ${report.reportingPeriod}.`, {
+            reportId: report.id,
+            cycleId: report.cycleId,
+            // The sample size is recorded on the draft itself. A tracer study in
+            // progress is easy to misread as a complete one, and the audit trail
+            // is where that gap gets recorded rather than assumed.
+            traced: report.cohort.tracedThisPeriod ?? null,
+            cohort: report.cohort.graduatesInCohort ?? null,
+          }),
+        ]);
+      },
+      submitAlumniReport: async (report, submittedBy, nextDueDateOverride) => {
+        // Step 1: VALIDATE. Only BLOCKING issues refuse.
+        //
+        // The distinction is the point of this department's validation. A
+        // contradiction somebody can type their way out of refuses the
+        // submission. A thin response rate or a loan in arrears does not, because
+        // neither is a data-entry mistake - both are facts, and refusing them
+        // would mean the department could only ever report on cohorts it found
+        // easy to reach. Those are returned separately and carried to review.
+        const validation = validateAlumniReport(report, { config: alumniConfig });
+        if (!validation.valid) {
+          return { ok: false, issues: validation.blockingIssues, attentionIssues: validation.attentionIssues };
+        }
+
+        const now = new Date().toISOString();
+        const submitted: AlumniReport = {
+          ...report,
+          status: "Submitted",
+          submittedAt: now,
+          submittedBy,
+          savedAt: undefined,
+          // Every figure this period came from a person tracing graduates, so
+          // the provenance says so rather than implying a system feed.
+          dataSource: { ...report.dataSource, kind: "Manual Entry" },
+        };
+
+        // Steps 2-4: SAVE, then CALCULATE. The only place Alumni KPIs are
+        // derived; every other surface reads these values.
+        const computation = computeAlumniKpis(submitted, kpis, alumniConfig);
+        setAlumniReports((prev) => [...prev.filter((r) => r.id !== submitted.id), submitted]);
+
+        // Steps 5-8: the shared pipeline. A KPI the registers could not derive
+        // is cleared rather than left showing an earlier cohort's figure as
+        // though it described this one - which is how a 40% response rate from
+        // twelve graduates ends up on the executive dashboard looking like a
+        // departmental result.
+        const cleared = clearSkippedKpis(computation.skipped, kpis, risks);
+        const kpiRun = runKpiSubmission(
+          computation.entries,
+          { kpis: cleared.kpis, risks: cleared.risks, actions },
+          submitted.reportingPeriod
+        );
+        setKpis(kpiRun.kpis);
+        setRisks(kpiRun.risks);
+        setActions(kpiRun.actions);
+
+        // Step 9: open the next cycle.
+        const cycleRun = runCycleSubmission(report.cycleId, submittedBy, nextDueDateOverride, cycles);
+        setCycles(cycleRun.cycles);
+
+        // Step 10: AUDIT. The sample size is recorded on the submission itself,
+        // not just in the message, so any figure derived from it can be traced
+        // back to how many graduates it was actually based on.
+        const derivedCount = computation.entries.length;
+        const skippedCount = computation.skipped.length;
+        const cohort = submitted.cohort;
+        const sampleNote =
+          typeof cohort.tracedThisPeriod === "number" && typeof cohort.graduatesInCohort === "number"
+            ? ` Traced ${cohort.tracedThisPeriod} of ${cohort.graduatesInCohort} graduates in the cohort (${computation.cohort?.responseRatePct ?? 0}% response).`
+            : "";
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            submittedBy,
+            "alumni_report_submitted",
+            "Alumni",
+            `Alumni tracer study submitted for ${report.reportingPeriod}: ${derivedCount} KPI(s) calculated, ${skippedCount} not derivable, source ${submitted.dataSource.kind}.${sampleNote}`,
+            {
+              reportId: submitted.id,
+              cycleId: report.cycleId,
+              reportingPeriod: submitted.reportingPeriod,
+              dataSource: submitted.dataSource.kind,
+              kpisCalculated: derivedCount,
+              kpisSkipped: skippedCount,
+              cohortSize: cohort.graduatesInCohort ?? null,
+              tracedThisPeriod: cohort.tracedThisPeriod ?? null,
+              untraceable: cohort.untraceable ?? null,
+              tracingMethod: cohort.tracingMethod || null,
+              responseRatePct: computation.cohort?.responseRatePct ?? null,
+              belowMinimumResponse: computation.cohort?.belowMinimumResponse
+                ? `yes - below the ${computation.cohort.minimumResponseRatePct}% minimum set in Administration`
+                : "no",
+              // An arrears balance is money, so it is recorded on the submission
+              // rather than only being visible on a dashboard card.
+              loansInArrears: computation.loans?.arrears ?? null,
+              arrearsValue: computation.loans?.arrearsValue ?? null,
+              // Both counts are kept because "not applicable" and "complete" are
+              // different facts, and only one of them means the department
+              // answered for that register.
+              sectionsReported: (Object.entries(validation.bySection) as [AlumniSectionKey, { state: string }][])
+                .filter(([, sec]) => sec.state === "complete")
+                .map(([key]) => key)
+                .join(", "),
+              sectionsNotApplicable: (Object.entries(validation.bySection) as [AlumniSectionKey, { state: string }][])
+                .filter(([, sec]) => sec.state === "not_applicable")
+                .map(([key]) => key)
+                .join(", "),
+              issuesAcknowledged: validation.attentionIssues.length,
+              nextDueDate: cycleRun.nextDueDate ?? null,
+            }
+          ),
+        ]);
+
+        return {
+          ok: true,
+          alerts: kpiRun.alerts,
+          computation,
+          nextDueDate: cycleRun.nextDueDate,
+          nextReportingPeriod: cycleRun.nextReportingPeriod,
+        };
+      },
       saveFinanceDraft: (report, actor) => {
         const stamped: FinanceReport = { ...report, status: "Draft", savedAt: new Date().toISOString() };
         setFinanceReports((prev) => [...prev.filter((r) => r.id !== report.id), stamped]);
@@ -1387,6 +1614,8 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       farmingReports,
       marketingConfig,
       marketingReports,
+      alumniConfig,
+      alumniReports,
     ]
   );
 

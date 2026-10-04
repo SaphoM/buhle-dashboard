@@ -53,7 +53,7 @@ export interface Kpi {
   id: string;
   name: string;
   department: Department;
-  unit: "currency" | "percent" | "count" | "ratio" | "days";
+  unit: "currency" | "percent" | "count" | "ratio" | "days" | "months";
   currentValue: number;
   previousValue: number;
   target: number;
