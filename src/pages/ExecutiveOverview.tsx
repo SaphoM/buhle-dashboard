@@ -221,9 +221,9 @@ export function ExecutiveOverview() {
                       value={formatValue({ ...revenueKpi, currentValue: revenueKpi.previousValue })}
                     />
                     <TipRow label="Target" value={formatTarget(revenueKpi)} />
-                    {revenueKpi.history.map((h) => (
-                      <TipRow key={h.period} label={h.period} value={`R${h.value.toLocaleString("en-ZA")}`} />
-                    ))}
+                    <span className="mt-1 block opacity-70">
+                      Point at any bar for that period&apos;s exact figure.
+                    </span>
                   </span>
                 }
               >
@@ -237,7 +237,10 @@ export function ExecutiveOverview() {
             </Link>
           </div>
           <div className="mt-3">
-            <MiniBarTrend data={revenueKpi.history} />
+            <MiniBarTrend
+              data={revenueKpi.history}
+              format={(v) => formatValue({ ...revenueKpi, currentValue: v })}
+            />
           </div>
         </div>
 

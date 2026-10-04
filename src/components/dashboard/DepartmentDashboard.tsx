@@ -226,9 +226,9 @@ export function DepartmentDashboard({
                             value={formatValue({ ...spotlightKpi, currentValue: spotlightKpi.previousValue })}
                           />
                           <TipRow label="Target" value={formatTarget(spotlightKpi)} />
-                          {spotlightKpi.history.map((h) => (
-                            <TipRow key={h.period} label={h.period} value={String(h.value)} />
-                          ))}
+                          <span className="mt-1 block opacity-70">
+                            Point at any bar for that period&apos;s exact figure.
+                          </span>
                         </span>
                       }
                     >
@@ -239,7 +239,10 @@ export function DepartmentDashboard({
                   </div>
                 </div>
                 <div className="mt-3">
-                  <MiniBarTrend data={spotlightKpi.history.length > 0 ? spotlightKpi.history : [{ period: "-", value: 0 }]} />
+                  <MiniBarTrend
+                    data={spotlightKpi.history.length > 0 ? spotlightKpi.history : [{ period: "-", value: 0 }]}
+                    format={(v) => formatValue({ ...spotlightKpi, currentValue: v })}
+                  />
                 </div>
               </div>
             )}

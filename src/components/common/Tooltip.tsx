@@ -109,12 +109,15 @@ export function Tooltip({
       <span
         id={id}
         role="tooltip"
-        className={`pointer-events-none absolute z-30 ${bubbleWidth} ${placement} max-w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl bg-ink px-3 py-2 text-xs leading-snug text-butter opacity-0 shadow-lg transition-opacity duration-150 group-hover/tip:opacity-100 group-focus-within/tip:opacity-100 ${
+        className={`pointer-events-none absolute z-30 ${bubbleWidth} ${placement} max-w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl bg-ink/95 px-3 py-2 text-xs leading-snug text-butter opacity-0 shadow-lg backdrop-blur-[2px] transition-opacity duration-150 group-hover/tip:opacity-100 group-focus-within/tip:opacity-100 ${
           pinned ? "opacity-100" : ""
         }`}
       >
         {bubble}
-        <span className={`absolute h-2 w-2 bg-ink ${arrow}`} />
+        {/* The arrow carries the same 95% ink as the bubble. It has to: at full
+            opacity the arrow would read as a solid chip attached to a slightly
+            see-through bubble, because the two sit on different backdrops. */}
+        <span className={`absolute h-2 w-2 bg-ink/95 ${arrow}`} />
       </span>
     </span>
   );
