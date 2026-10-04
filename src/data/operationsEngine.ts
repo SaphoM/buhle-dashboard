@@ -1,5 +1,7 @@
 import { OPERATIONS_SECTION_KEYS, type OperationsConfig, type OperationsReport, type OperationsSectionKey } from "../types/operations";
 import { OPERATIONS_KPI_IDS } from "./operationsSeed";
+import { getStatusForValue } from "./kpiEngine";
+import type { Kpi } from "../types";
 
 // ============================================================================
 // OPERATIONS calculations.
@@ -684,6 +686,60 @@ export function sectionForKpi(kpiId: string): OperationsSectionKey {
     default:
       return OPERATIONS_SECTION_KEYS[0];
   }
+}
+
+/**
+ * The verdict a single Operations KPI would receive right now.
+ *
+ * Separated from computation so the section previews and the submission path
+ * cannot disagree. A KPI with no approved threshold returns `threshold_unset`
+ * rather than a colour: nobody has decided what a good attendance rate is, and
+ * a green light on an undecided target would be a claim the dashboard cannot
+ * support.
+ */
+export function previewOperationsStatus(kpi: Kpi | undefined, value: number | null) {
+  if (!kpi || value === null) {
+    // Same convention as getStatus: a KPI flagged unavailable WITH a reason says
+    // so, and anything else is simply no data yet. Returning not_available for
+    // every empty figure would call every untouched KPI "Not Yet Available",
+    // which is a different and much stronger claim than "nothing recorded".
+    if (kpi && kpi.dataAvailable === false && kpi.notAvailableReason) {
+      return { status: "not_available" as const, thresholdNote: kpi.notAvailableReason };
+    }
+    return { status: "no_data" as const, thresholdNote: "" };
+  }
+  // A value is in hand, so the value is judged.
+  //
+  // `dataAvailable` describes the STORED KPI, not this live preview: every
+  // Operations KPI ships with dataAvailable false and stays false until a
+  // submission lands, so letting that flag win here would show "Not Yet
+  // Available" for a figure the manager has just typed in, and would suppress the
+  // threshold warning on the very preview that exists to warn them.
+  const status = getStatusForValue(kpi, value);
+  if (status === "threshold_unset") {
+    return {
+      status,
+      thresholdNote:
+        "Threshold not configured - no approved limit has been set for this KPI, so no Green/Amber/Red verdict can be given. The figure will be recorded and monitored only.",
+    };
+  }
+  return { status, thresholdNote: "" };
+}
+
+/** Every Amber/Red Operations KPI that is expected to need an explanation. */
+export function operationsKpisNeedingExplanation(
+  computation: OperationsComputation,
+  kpis: Kpi[]
+): { kpiId: string; name: string; value: number; status: "amber" | "red" }[] {
+  return computation.entries
+    .map(({ kpiId, value }) => {
+      const kpi = kpis.find((k) => k.id === kpiId);
+      if (!kpi) return null;
+      const status = getStatusForValue(kpi, value);
+      if (status !== "amber" && status !== "red") return null;
+      return { kpiId, name: kpi.name, value, status };
+    })
+    .filter((x): x is { kpiId: string; name: string; value: number; status: "amber" | "red" } => x !== null);
 }
 
 export { round as roundOperations, pct as operationsPct };

@@ -102,6 +102,18 @@ const FINANCE_FREQUENCY_OPTIONS = [
   "Per Season",
 ] as const satisfies readonly ReportingFrequency[];
 
+// Operations is per-cohort in practice: enrolment, attendance, completion and
+// dropout are all term-level facts, so a monthly cycle would report the same
+// cohort four times and make a completion rate look like it moved when nothing
+// about the cohort changed. The option set stays close to that.
+const OPERATIONS_FREQUENCY_OPTIONS = [
+  "Per Cohort",
+  "Per Season",
+  "Monthly",
+  "Quarterly",
+  "Per Batch",
+] as const satisfies readonly ReportingFrequency[];
+
 /** A renameable list of approved categories. Finance's category structure comes
  *  from the workbook and the organisation's chart of accounts, so it is
  *  editable here rather than compiled in - Section 6 and Section 21 both require
@@ -136,7 +148,17 @@ function CategoryList({
 }
 
 export function Administration() {
-  const { kpis, updateKpiThresholds, hrConfig, updateHrConfig, financeConfig, updateFinanceConfig, auditLog } =
+  const {
+    kpis,
+    updateKpiThresholds,
+    hrConfig,
+    updateHrConfig,
+    financeConfig,
+    updateFinanceConfig,
+    operationsConfig,
+    updateOperationsConfig,
+    auditLog,
+  } =
     useDataStore();
   const [kpiDeptFilter, setKpiDeptFilter] = useState<Department | "all">("all");
   const toast = useToast();
@@ -472,6 +494,157 @@ export function Administration() {
           </div>
 
           <FinanceWorkbookDependencyNotice dependency={FINANCE_WORKBOOK_DEPENDENCY} />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
+          Operations Configuration{" "}
+          <span className="normal-case text-ink-soft/40">
+            - the conventions and approved vocabularies Operations decides
+          </span>
+        </h2>
+        <div className="card-surface flex flex-col gap-5 rounded-3xl border border-ink/10 p-6 shadow-sm">
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <p className="text-sm font-semibold text-ink">No Operations KPI threshold is configured</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-soft/50">
+              All twelve Operations KPIs ship with no approved limit, so they report{" "}
+              <span className="font-medium text-ink-soft/70">Threshold not configured</span> instead of a
+              Green/Amber/Red verdict. That is the honest position while Buhle&apos;s learner-facing targets are
+              still being agreed: a made-up target would manufacture warnings, and missing one would manufacture
+              false reassurance. Approving a limit in the KPI threshold table above switches the Early Warning
+              System on for that figure immediately, with no code change.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <label className="flex max-w-sm flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Operations reporting frequency</span>
+              <select
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={operationsConfig.reportingFrequency}
+                onChange={(e) =>
+                  updateOperationsConfig({
+                    reportingFrequency: e.target.value as typeof operationsConfig.reportingFrequency,
+                  })
+                }
+              >
+                {OPERATIONS_FREQUENCY_OPTIONS.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] text-ink-soft/40">
+                Drives the calculated next submission date for every Operations cycle. Per Cohort is the default,
+                because completion and dropout are cohort-level facts.
+              </span>
+            </label>
+
+            <label className="flex max-w-[120px] flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Currency symbol</span>
+              <input
+                type="text"
+                maxLength={3}
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={operationsConfig.currencySymbol}
+                onChange={(e) => updateOperationsConfig({ currencySymbol: e.target.value })}
+              />
+              <span className="text-[11px] text-ink-soft/40">
+                Display only, for asset values. Every amount is stored as a plain number, so changing this changes
+                presentation and never the figures.
+              </span>
+            </label>
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={operationsConfig.reEnrolmentCountsAsDropout}
+                onChange={(e) =>
+                  updateOperationsConfig({ reEnrolmentCountsAsDropout: e.target.checked })
+                }
+                className="mt-1 h-4 w-4 rounded border-ink/20 accent-ink"
+              />
+              <span>
+                <span className="text-sm font-semibold text-ink">
+                  A learner who re-enrols still counts as a dropout
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-ink-soft/50">
+                  Off, a learner who left and then re-enrolled in the same programme is excluded from the dropout
+                  numerator while remaining in the denominator, because the dropout rate answers &quot;did learners
+                  who began this cohort finish it?&quot; rather than &quot;how many times did somebody leave?&quot;.
+                  The two conventions produce materially different rates, so this is recorded here as an explicit
+                  policy decision rather than assumed in the engine.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <CategoryList
+            title="Approved programmes"
+            description="The course and programme list every learner, session and completion record must reference. A value outside this list is rejected at submission rather than silently accepted, because an unregistered programme makes a cohort rate meaningless."
+            items={operationsConfig.programmes.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateOperationsConfig({
+                programmes: operationsConfig.programmes.map((c, i) => (i === index ? label : c)),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved asset categories"
+            description="The asset register's categories. Asset value, condition and in-service base all come from the register itself, never from a summary someone types."
+            items={operationsConfig.assetCategories.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateOperationsConfig({
+                assetCategories: operationsConfig.assetCategories.map((c, i) => (i === index ? label : c)),
+              })
+            }
+          />
+
+          <div>
+            <p className="text-xs font-semibold text-ink-soft/60">Attendance reporting bands</p>
+            <p className="mt-1 text-[11px] text-ink-soft/40">
+              Present / absent counts per band, for reporting only. The attendance rate itself is derived from the
+              session register and can never be typed, so these bands describe an already-calculated figure rather
+              than being an input to it.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {operationsConfig.attendanceBands.map((band, index) => (
+                <label key={band.label} className="flex items-center gap-2 rounded-xl bg-white px-3 py-1.5">
+                  <input
+                    className="w-28 rounded-lg border border-ink/10 bg-white px-2 py-1 text-xs text-ink"
+                    value={band.label}
+                    onChange={(e) =>
+                      updateOperationsConfig({
+                        attendanceBands: operationsConfig.attendanceBands.map((b, i) =>
+                          i === index ? { ...b, label: e.target.value } : b
+                        ),
+                      })
+                    }
+                  />
+                  <span className="text-[11px] text-ink-soft/35">from</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    className="w-20 rounded-lg border border-ink/10 bg-white px-2 py-1 text-xs text-ink"
+                    value={band.minPct}
+                    onChange={(e) =>
+                      updateOperationsConfig({
+                        attendanceBands: operationsConfig.attendanceBands.map((b, i) =>
+                          i === index ? { ...b, minPct: Number(e.target.value) } : b
+                        ),
+                      })
+                    }
+                  />
+                  <span className="text-[11px] text-ink-soft/35">%</span>
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 

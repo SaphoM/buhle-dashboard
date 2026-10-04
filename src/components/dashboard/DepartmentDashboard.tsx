@@ -13,6 +13,8 @@ import { formatValue, getStatus } from "../../data/kpiEngine";
 import { SubmitDataModal } from "./SubmitDataModal";
 import { HrSubmitDataModal } from "./HrSubmitDataModal";
 import { FinanceSubmitDataModal } from "./FinanceSubmitDataModal";
+import { OperationsSubmitDataModal } from "./OperationsSubmitDataModal";
+import { OperationsHealthSummary } from "./operations/OperationsHealthSummary";
 
 export function DepartmentDashboard({
   department,
@@ -33,6 +35,11 @@ export function DepartmentDashboard({
   // directly would bypass the engine and create a second, divergent set of
   // financial rules (Finance spec Sections 5, 39).
   const usesFinanceSubmission = department === "Finance";
+  // Operations reports the same way HR and Finance do, and for the same
+  // structural reason: all twelve of its KPIs are derived from the seven
+  // registers in the submission, so the flat KPI form would bypass the engine
+  // and let someone type a completion rate that no register supports.
+  const usesOperationsSubmission = department === "Operations";
   const kpis = allKpis.filter((k) => k.department === department);
   const allDeptRisks = allRisks.filter((r) => r.department === department);
   const risks = allDeptRisks.filter((r) => r.status !== "Resolved");
@@ -216,6 +223,11 @@ export function DepartmentDashboard({
           result from a result nobody has reported yet. */}
       {department === "Finance" && <FinanceHealthSummary />}
 
+      {/* Operations states its own headline figures, the register each was
+          derived from, and how many of the seven registers actually hold
+          rows, because an empty section is not the same claim as a zero. */}
+      {department === "Operations" && <OperationsHealthSummary />}
+
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">Key Performance Indicators</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -275,6 +287,8 @@ export function DepartmentDashboard({
         <HrSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : usesFinanceSubmission ? (
         <FinanceSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      ) : usesOperationsSubmission ? (
+        <OperationsSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : (
         <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
       )}

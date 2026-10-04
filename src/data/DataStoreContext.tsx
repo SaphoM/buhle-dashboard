@@ -19,12 +19,25 @@ import type { FinanceConfig, FinanceReport } from "../types/finance";
 import { computeFinanceKpis, type FinanceKpiComputation } from "./financeEngine";
 import { validateFinanceReport, type ValidationIssue as FinanceValidationIssue } from "./financeValidation";
 import { DEFAULT_FINANCE_CONFIG, FINANCE_SUBMISSION_KPIS } from "./financeSeed";
+import type { OperationsConfig, OperationsReport, OperationsSectionKey } from "../types/operations";
+import { computeOperationsKpis, type OperationsComputation } from "./operationsEngine";
+import { validateOperationsReport } from "./operationsValidation";
+import { DEFAULT_OPERATIONS_CONFIG, OPERATIONS_SUBMISSION_KPIS } from "./operationsSeed";
 
 // The HR submission owns four KPIs that predate it in name only - they become
 // reportable the moment HR submits the underlying records. Finance is the
 // authoritative source for a larger set (Sections 30 and 39), so the same applies
 // there: a Finance KPI is reportable the moment Finance submits its records.
-const INITIAL_KPIS: Kpi[] = [...DEMO_KPIS, ...HR_SUBMISSION_KPIS, ...FINANCE_SUBMISSION_KPIS];
+// Operations works the same way, and it carries the two ids the demo risks and
+// the Executive roll-up already point at (kpi-enrolment, kpi-completion), so
+// those must exist in the store from the first render rather than appearing only
+// after a submission.
+const INITIAL_KPIS: Kpi[] = [
+  ...DEMO_KPIS,
+  ...HR_SUBMISSION_KPIS,
+  ...FINANCE_SUBMISSION_KPIS,
+  ...OPERATIONS_SUBMISSION_KPIS,
+];
 
 // Lifts the KPI and Cycle demo arrays into React state so a department
 // manager's submission (via the Input Modal - Section 47) actually flows
@@ -75,6 +88,9 @@ export interface DataStoreValue {
    * these reports are what the Executive Dashboard ultimately reads.
    */
   financeReports: FinanceReport[];
+  /** Operations submissions, one per reporting cycle (Section 6 and the seven
+   *  reporting areas that follow it). */
+  operationsReports: OperationsReport[];
   /** Employee registry - the single source for employee identity (Section 26). */
   employees: Employee[];
   /** Append-only record of every consequential change (Section 19, step 12). */
@@ -83,6 +99,9 @@ export interface DataStoreValue {
   /** Section 4: Finance cadence, currency, categories, ageing and the
    *  committed-budget convention all live in configuration, never in a formula. */
   financeConfig: FinanceConfig;
+  /** Approved Operations vocabularies and cadence. Every vocabulary the
+   *  validation and the import check against is configured, not hard-coded. */
+  operationsConfig: OperationsConfig;
   /**
    * Records values for one or more KPIs in a single atomic step - clears
    * "no data", shifts history forward, then reacts: creates/escalates/
@@ -131,7 +150,41 @@ export interface DataStoreValue {
   submitHrReport: (report: HrReport, submittedBy: string, nextDueDateOverride?: string) => HrSubmissionOutcome;
   /** Section 2/4: Finance configuration is administration-owned. */
   updateFinanceConfig: (updates: Partial<FinanceConfig>) => void;
-  /** Saves partial Finance progress without submitting, and without touching KPIs/EWS. */
+  /**
+   * Operations configuration is administration-owned too, and is where the
+   * approved vocabularies (programmes, asset categories, dropout reasons) and
+   * the reporting cadence live. These are the values the Operations engine reads
+   * when it validates and derives, so changing one here changes what a
+   * submission is allowed to say.
+   */
+  updateOperationsConfig: (updates: Partial<OperationsConfig>) => void;
+  /** Saves partial Operations progress without submitting, and without touching KPIs/EWS. */
+  saveOperationsDraft: (report: OperationsReport, actor: string) => void;
+  /**
+   * Records a workbook import against an Operations report, including a failed
+   * one. Separate from saving a draft so the audit trail distinguishes a number
+   * read from a spreadsheet from a number typed in.
+   */
+  recordOperationsImport: (report: OperationsReport, actor: string, summary: string) => void;
+  /**
+   * The full Operations chain, mirroring Finance and HR: validate -> save ->
+   * calculate KPIs -> RAG -> evaluate EWS -> create/update risks -> open the next
+   * cycle -> audit.
+   */
+  submitOperationsReport: (
+    report: OperationsReport,
+    submittedBy: string,
+    nextDueDateOverride?: string
+  ) => Promise<
+    | {
+        ok: true;
+        alerts: EwsAlert[];
+        computation: OperationsComputation;
+        nextDueDate?: string;
+        nextReportingPeriod?: string;
+      }
+    | { ok: false; issues: ReturnType<typeof validateOperationsReport>["issues"] }
+  >;
   saveFinanceDraft: (report: FinanceReport, actor: string) => void;
   /**
    * Records a workbook import against a Finance report (Section 26). Kept
@@ -188,6 +241,7 @@ function auditEntry(
 export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [hrConfig, setHrConfig] = useState<HrConfig>(DEFAULT_HR_CONFIG);
   const [financeConfig, setFinanceConfig] = useState<FinanceConfig>(DEFAULT_FINANCE_CONFIG);
+  const [operationsConfig, setOperationsConfig] = useState<OperationsConfig>(DEFAULT_OPERATIONS_CONFIG);
   const [kpis, setKpis] = useState<Kpi[]>(() =>
     // Section 8/9: the Staff Performance KPI's availability is driven by the
     // HR configuration switch, not hard-coded, so the toggle in Administration
@@ -211,6 +265,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     DEMO_CYCLES.map((c) => {
       if (c.cycleId.startsWith("cyc-hr-data-")) return { ...c, frequency: DEFAULT_HR_CONFIG.reportingFrequency };
       if (c.department === "Finance") return { ...c, frequency: DEFAULT_FINANCE_CONFIG.reportingFrequency };
+      if (c.department === "Operations") return { ...c, frequency: DEFAULT_OPERATIONS_CONFIG.reportingFrequency };
       return c;
     })
   );
@@ -218,6 +273,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [actions, setActions] = useState<CorrectiveAction[]>(DEMO_ACTIONS);
   const [hrReports, setHrReports] = useState<HrReport[]>([]);
   const [financeReports, setFinanceReports] = useState<FinanceReport[]>([]);
+  const [operationsReports, setOperationsReports] = useState<OperationsReport[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
 
@@ -393,10 +449,12 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       actions,
       hrReports,
       financeReports,
+      operationsReports,
       employees,
       auditLog,
       hrConfig,
       financeConfig,
+      operationsConfig,
       submitKpiValues: (entries) => {
         // No reporting period is claimed here: this path has no report behind
         // it, so guessing one would attach the wrong period to any risk it
@@ -665,6 +723,148 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           ),
         ]);
       },
+      updateOperationsConfig: (updates: Partial<OperationsConfig>) => {
+        setOperationsConfig((prev) => ({ ...prev, ...updates }));
+
+        // The cadence change moves the open Operations cycle with it, exactly as
+        // it does for HR and Finance.
+        if (updates.reportingFrequency) {
+          const frequency = updates.reportingFrequency;
+          setCycles((prev) =>
+            prev.map((c) =>
+              c.department === "Operations" && !["Closed", "Accepted"].includes(c.status) ? { ...c, frequency } : c
+            )
+          );
+        }
+
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            "Administrator",
+            "operations_config_updated",
+            "Operations",
+            `Operations configuration updated: ${Object.keys(updates).join(", ")}.`,
+            Object.fromEntries(
+              Object.entries(updates).map(([k, v]) => [
+                k,
+                Array.isArray(v) ? v.join(", ") || "(emptied)" : String(v),
+              ])
+            )
+          ),
+        ]);
+      },
+      saveOperationsDraft: (report, actor) => {
+        const stamped: OperationsReport = { ...report, status: "Draft", savedAt: new Date().toISOString() };
+        setOperationsReports((prev) => [...prev.filter((r) => r.id !== report.id), stamped]);
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(actor, "operations_draft_saved", "Operations", `Draft saved for ${report.reportingPeriod}.`, {
+            reportId: report.id,
+            cycleId: report.cycleId,
+          }),
+        ]);
+      },
+      recordOperationsImport: (report, actor, summary) => {
+        const stamped: OperationsReport = { ...report, savedAt: new Date().toISOString() };
+        setOperationsReports((prev) => [...prev.filter((r) => r.id !== report.id), stamped]);
+
+        // The run's own status decides the audit action. A refused workbook is
+        // exactly the event the audit trail exists to make visible: the manager
+        // sent numbers and they did not arrive.
+        const latestRun = report.importRuns[report.importRuns.length - 1];
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            actor,
+            latestRun?.status === "Failed" ? "operations_import_failed" : "operations_import_completed",
+            "Operations",
+            summary || `Workbook import recorded for ${report.reportingPeriod}.`,
+            {
+              reportId: report.id,
+              fileName: report.dataSource.fileName ?? null,
+              sheetName: report.dataSource.sheetName ?? null,
+              runs: report.importRuns.length,
+            }
+          ),
+        ]);
+      },
+      submitOperationsReport: async (report, submittedBy, nextDueDateOverride) => {
+        // Step 1: VALIDATE. The refusal rule is the same as HR and Finance: a
+        // partial report that looks submitted is the failure mode this guards.
+        const validation = validateOperationsReport(report, { config: operationsConfig });
+        if (!validation.valid) {
+          return { ok: false, issues: validation.issues };
+        }
+
+        const now = new Date().toISOString();
+        const submitted: OperationsReport = {
+          ...report,
+          status: "Submitted",
+          submittedAt: now,
+          submittedBy,
+          savedAt: undefined,
+          dataSource:
+            report.dataSource.kind === "Workbook Import" || report.importRuns.length > 0
+              ? { ...report.dataSource, kind: "Workbook Import" }
+              : { ...report.dataSource, kind: "Manual Entry" },
+        };
+
+        // Steps 2-4: SAVE, then CALCULATE. This is the only place Operations
+        // KPIs are derived; everything else reads these values.
+        const computation = computeOperationsKpis(submitted, kpis, operationsConfig);
+        setOperationsReports((prev) => [...prev.filter((r) => r.id !== submitted.id), submitted]);
+
+        // Steps 5-8: the shared pipeline. An Operations KPI the submission could
+        // not derive must stop displaying the previous term's figure as though
+        // it described this one, and any risk resting on that stale figure closes.
+        const cleared = clearSkippedKpis(computation.skipped, kpis, risks);
+        const kpiRun = runKpiSubmission(
+          computation.entries,
+          { kpis: cleared.kpis, risks: cleared.risks, actions },
+          submitted.reportingPeriod
+        );
+        setKpis(kpiRun.kpis);
+        setRisks(kpiRun.risks);
+        setActions(kpiRun.actions);
+
+        // Step 9: open the next cycle.
+        const cycleRun = runCycleSubmission(report.cycleId, submittedBy, nextDueDateOverride, cycles);
+        setCycles(cycleRun.cycles);
+
+        // Step 10: AUDIT.
+        const derivedCount = computation.entries.length;
+        const skippedCount = computation.skipped.length;
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            submittedBy,
+            "operations_report_submitted",
+            "Operations",
+            `Operations report submitted for ${report.reportingPeriod}: ${derivedCount} KPI(s) calculated, ${skippedCount} not derivable, source ${submitted.dataSource.kind}.`,
+            {
+              reportId: submitted.id,
+              cycleId: report.cycleId,
+              reportingPeriod: submitted.reportingPeriod,
+              dataSource: submitted.dataSource.kind,
+              kpisCalculated: derivedCount,
+              kpisSkipped: skippedCount,
+              sectionsReported: (Object.entries(validation.bySection) as [OperationsSectionKey, { state: string }][])
+                .filter(([, s]) => s.state === "complete")
+                .map(([key]) => key)
+                .join(", "),
+              nextDueDate: cycleRun.nextDueDate ?? null,
+            }
+          ),
+        ]);
+
+        return {
+          ok: true,
+          alerts: kpiRun.alerts,
+          computation,
+          nextDueDate: cycleRun.nextDueDate,
+          nextReportingPeriod: cycleRun.nextReportingPeriod,
+        };
+      },
       saveFinanceDraft: (report, actor) => {
         const stamped: FinanceReport = { ...report, status: "Draft", savedAt: new Date().toISOString() };
         setFinanceReports((prev) => [...prev.filter((r) => r.id !== report.id), stamped]);
@@ -822,7 +1022,20 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
         return action;
       },
     }),
-    [kpis, cycles, risks, actions, hrReports, financeReports, employees, auditLog, hrConfig, financeConfig]
+    [
+      kpis,
+      cycles,
+      risks,
+      actions,
+      hrReports,
+      financeReports,
+      operationsReports,
+      employees,
+      auditLog,
+      hrConfig,
+      financeConfig,
+      operationsConfig,
+    ]
   );
 
   return <DataStoreContext.Provider value={value}>{children}</DataStoreContext.Provider>;

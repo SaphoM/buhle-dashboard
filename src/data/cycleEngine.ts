@@ -160,6 +160,23 @@ export function getOpenFinanceCycle(
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
 }
 
+/**
+ * The Operations cycle a submission is being written against: the soonest-due
+ * cycle that is still open. Same definition as Finance, so the Operations
+ * dashboard and the Operations modal can never read figures from two different
+ * cycles.
+ */
+export function getOpenOperationsCycle(
+  cycles: DataCollectionCycle[],
+  now: Date = new Date()
+): DataCollectionCycle | undefined {
+  return cycles
+    .filter((c) => c.department === "Operations")
+    .filter((c) => !["Accepted", "Closed"].includes(getEffectiveStatus(c, now)))
+    .filter((c) => !["Submitted", "Validation Required"].includes(getEffectiveStatus(c, now)))
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+}
+
 export const cycleStatusMeaning: Record<CycleStatus, string> = {
   Upcoming: "Not yet open for entry.",
   Open: "Open for entry - not yet started.",
