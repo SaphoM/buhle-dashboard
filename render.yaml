@@ -1,0 +1,28 @@
+# Render blueprint for the staging deploy.
+#
+# A Static Site, not a web service: this is a client-only Vite build with no
+# server, no API and no database, so Render only needs to run the build once and
+# serve ./dist. Nothing here runs on request, which is why a static site is the
+# right shape rather than a cheap web service.
+#
+# The branch is staging, deliberately. master is what GitHub Pages publishes from
+# (see the gh-pages branch), so staging is the branch that gets rebuilt on every
+# commit without touching the published site.
+#
+# Why VITE_BASE_PATH is set here: this app has no router, so the base path is
+# baked into every asset URL at build time. GitHub Pages serves it from a
+# repository subdirectory and needs /buhle-dashboard/; Render serves it at a
+# domain root and needs /. Setting it in the blueprint means nobody has to
+# remember it, and a wrong value shows up as a blank page with 404s rather than as
+# a subtle styling problem.
+services:
+  - type: web
+    name: buhle-dashboard-staging
+    runtime: static
+    branch: staging
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: VITE_BASE_PATH
+        value: /
