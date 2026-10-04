@@ -15,6 +15,8 @@ import { HrSubmitDataModal } from "./HrSubmitDataModal";
 import { FinanceSubmitDataModal } from "./FinanceSubmitDataModal";
 import { OperationsSubmitDataModal } from "./OperationsSubmitDataModal";
 import { OperationsHealthSummary } from "./operations/OperationsHealthSummary";
+import { MarketingSubmitDataModal } from "./MarketingSubmitDataModal";
+import { MarketingHealthSummary } from "./marketing/MarketingHealthSummary";
 
 export function DepartmentDashboard({
   department,
@@ -40,6 +42,11 @@ export function DepartmentDashboard({
   // registers in the submission, so the flat KPI form would bypass the engine
   // and let someone type a completion rate that no register supports.
   const usesOperationsSubmission = department === "Operations";
+  // Marketing reports the same way, and for the sharpest version of the same
+  // structural reason: its conversion rate is the figure everybody quotes and
+  // the easiest one to type directly, so the flat KPI form would let someone
+  // report a rate that no enquiry record supports.
+  const usesMarketingSubmission = department === "Marketing";
   const kpis = allKpis.filter((k) => k.department === department);
   const allDeptRisks = allRisks.filter((r) => r.department === department);
   const risks = allDeptRisks.filter((r) => r.status !== "Resolved");
@@ -228,6 +235,12 @@ export function DepartmentDashboard({
           rows, because an empty section is not the same claim as a zero. */}
       {department === "Operations" && <OperationsHealthSummary />}
 
+      {/* Marketing states its own headline figures, the register each was
+          derived from, and how many of the five registers hold rows. It also
+          separates "the rate is 0%" from "no outcome was ever recorded", which
+          the generic KPI grid cannot tell apart. */}
+      {department === "Marketing" && <MarketingHealthSummary />}
+
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">Key Performance Indicators</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -289,6 +302,8 @@ export function DepartmentDashboard({
         <FinanceSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : usesOperationsSubmission ? (
         <OperationsSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      ) : usesMarketingSubmission ? (
+        <MarketingSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : (
         <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
       )}

@@ -27,6 +27,10 @@ import type { FarmingConfig, FarmingReport, FarmingSectionKey } from "../types/f
 import { computeFarmingKpis, type FarmingComputation } from "./farmingEngine";
 import { validateFarmingReport } from "./farmingValidation";
 import { DEFAULT_FARMING_CONFIG, FARMING_SUBMISSION_KPIS } from "./farmingSeed";
+import type { MarketingConfig, MarketingReport, MarketingSectionKey } from "../types/marketing";
+import { computeMarketingKpis, type MarketingComputation } from "./marketingEngine";
+import { validateMarketingReport } from "./marketingValidation";
+import { DEFAULT_MARKETING_CONFIG, MARKETING_SUBMISSION_KPIS } from "./marketingSeed";
 
 // The HR submission owns four KPIs that predate it in name only - they become
 // reportable the moment HR submits the underlying records. Finance is the
@@ -97,6 +101,8 @@ export interface DataStoreValue {
   operationsReports: OperationsReport[];
   /** Commercial Farming register submissions, one per reporting cycle. */
   farmingReports: FarmingReport[];
+  /** Marketing register submissions, one per reporting cycle. */
+  marketingReports: MarketingReport[];
   /** Employee registry - the single source for employee identity (Section 26). */
   employees: Employee[];
   /** Append-only record of every consequential change (Section 19, step 12). */
@@ -114,6 +120,12 @@ export interface DataStoreValue {
    *  Validation checks every vocabulary against these, so a record cannot name a
    *  category that this season's configuration does not carry. */
   farmingConfig: FarmingConfig;
+  /** Marketing: approved enquiry channels and OUTCOMES, campaign channels and
+   *  states, lead sources, partnership types and states, programmes and
+   *  provinces. The outcome list is configuration because the conversion rate is
+   *  derived from it: adding an outcome there immediately changes what counts as
+   *  a conversion, and that is a policy decision rather than a coding one. */
+  marketingConfig: MarketingConfig;
   /**
    * Records values for one or more KPIs in a single atomic step - clears
    * "no data", shifts history forward, then reacts: creates/escalates/
@@ -224,6 +236,32 @@ export interface DataStoreValue {
       }
     | { ok: false; issues: ReturnType<typeof validateFarmingReport>["issues"] }
   >;
+  /** Applies Marketing configuration: cadence, currency and every approved
+   *  vocabulary the validation checks against. A cadence change moves the open
+   *  Marketing cycle with it, as it does for every other department. */
+  updateMarketingConfig: (updates: Partial<MarketingConfig>) => void;
+  /** Saves Marketing register progress without submitting, and without touching
+   *  KPIs or Early Warning. */
+  saveMarketingDraft: (report: MarketingReport, actor: string) => void;
+  /** The full Marketing chain, identical in shape to the other departments:
+   *  validate -> save -> calculate KPIs -> RAG -> evaluate EWS -> create/update
+   *  risks -> open the next cycle -> audit. Nothing is derived before validation
+   *  passes, and a KPI the registers cannot produce is marked not derivable
+   *  rather than left showing last month's figure. */
+  submitMarketingReport: (
+    report: MarketingReport,
+    submittedBy: string,
+    nextDueDateOverride?: string
+  ) => Promise<
+    | {
+        ok: true;
+        alerts: EwsAlert[];
+        computation: MarketingComputation;
+        nextDueDate?: string;
+        nextReportingPeriod?: string;
+      }
+    | { ok: false; issues: ReturnType<typeof validateMarketingReport>["issues"] }
+  >;
   saveFinanceDraft: (report: FinanceReport, actor: string) => void;
   /**
    * Records a workbook import against a Finance report (Section 26). Kept
@@ -282,6 +320,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [financeConfig, setFinanceConfig] = useState<FinanceConfig>(DEFAULT_FINANCE_CONFIG);
   const [operationsConfig, setOperationsConfig] = useState<OperationsConfig>(DEFAULT_OPERATIONS_CONFIG);
   const [farmingConfig, setFarmingConfig] = useState<FarmingConfig>(DEFAULT_FARMING_CONFIG);
+  const [marketingConfig, setMarketingConfig] = useState<MarketingConfig>(DEFAULT_MARKETING_CONFIG);
   const [kpis, setKpis] = useState<Kpi[]>(() =>
     // Section 8/9: the Staff Performance KPI's availability is driven by the
     // HR configuration switch, not hard-coded, so the toggle in Administration
@@ -290,7 +329,11 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     // two that already exist (farm revenue, mortality) de-duplicated by id: the
     // same identifier must not appear twice in the store, or the KPI pipeline and
     // a risk pointing at that id would disagree about which record they mean.
-    [...INITIAL_KPIS, ...FARMING_SUBMISSION_KPIS.filter((fk) => !INITIAL_KPIS.some((k) => k.id === fk.id))].map(
+    [
+      ...INITIAL_KPIS,
+      ...FARMING_SUBMISSION_KPIS.filter((fk) => !INITIAL_KPIS.some((k) => k.id === fk.id)),
+      ...MARKETING_SUBMISSION_KPIS.filter((mk) => !INITIAL_KPIS.some((k) => k.id === mk.id)),
+    ].map(
       (kpi) =>
         kpi.id === HR_KPI_IDS.performance
           ? {
@@ -314,6 +357,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       if (c.department === "Commercial Farming") {
         return { ...c, frequency: DEFAULT_FARMING_CONFIG.reportingFrequency };
       }
+      if (c.department === "Marketing") return { ...c, frequency: DEFAULT_MARKETING_CONFIG.reportingFrequency };
       return c;
     })
   );
@@ -323,6 +367,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [financeReports, setFinanceReports] = useState<FinanceReport[]>([]);
   const [operationsReports, setOperationsReports] = useState<OperationsReport[]>([]);
   const [farmingReports, setFarmingReports] = useState<FarmingReport[]>([]);
+  const [marketingReports, setMarketingReports] = useState<MarketingReport[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
 
@@ -500,12 +545,14 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       financeReports,
       operationsReports,
       farmingReports,
+      marketingReports,
       employees,
       auditLog,
       hrConfig,
       financeConfig,
       operationsConfig,
       farmingConfig,
+      marketingConfig,
       submitKpiValues: (entries) => {
         // No reporting period is claimed here: this path has no report behind
         // it, so guessing one would attach the wrong period to any risk it
@@ -1042,6 +1089,130 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           nextReportingPeriod: cycleRun.nextReportingPeriod,
         };
       },
+      updateMarketingConfig: (updates: Partial<MarketingConfig>) => {
+        setMarketingConfig((prev) => ({ ...prev, ...updates }));
+
+        // The cadence is configuration, so the open Marketing cycle takes the new
+        // cadence with it rather than keeping the seeded one.
+        if (updates.reportingFrequency) {
+          const frequency = updates.reportingFrequency;
+          setCycles((prev) =>
+            prev.map((c) =>
+              c.department === "Marketing" && !["Closed", "Accepted"].includes(c.status) ? { ...c, frequency } : c
+            )
+          );
+        }
+
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            "Administrator",
+            "marketing_config_updated",
+            "Marketing",
+            `Marketing configuration updated: ${Object.keys(updates).join(", ")}.`,
+            Object.fromEntries(
+              Object.entries(updates).map(([k, v]) => [
+                k,
+                Array.isArray(v) ? v.join(", ") || "(emptied)" : String(v),
+              ])
+            )
+          ),
+        ]);
+      },
+      saveMarketingDraft: (report, actor) => {
+        const stamped: MarketingReport = { ...report, status: "Draft", savedAt: new Date().toISOString() };
+        setMarketingReports((prev) => [...prev.filter((r) => r.id !== report.id), stamped]);
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(actor, "marketing_draft_saved", "Marketing", `Draft saved for ${report.reportingPeriod}.`, {
+            reportId: report.id,
+            cycleId: report.cycleId,
+          }),
+        ]);
+      },
+      submitMarketingReport: async (report, submittedBy, nextDueDateOverride) => {
+        // Step 1: VALIDATE. Refusal, not acceptance-with-caveats: a half-filled
+        // marketing report that looks submitted is exactly the failure this
+        // guards, because every Marketing KPI is derived from these rows.
+        const validation = validateMarketingReport(report, { config: marketingConfig });
+        if (!validation.valid) {
+          return { ok: false, issues: validation.issues };
+        }
+
+        const now = new Date().toISOString();
+        const submitted: MarketingReport = {
+          ...report,
+          status: "Submitted",
+          submittedAt: now,
+          submittedBy,
+          savedAt: undefined,
+          // Every figure this period came from a person typing, so the
+          // provenance says so rather than implying an analytics feed.
+          dataSource: { ...report.dataSource, kind: "Manual Entry" },
+        };
+
+        // Steps 2-4: SAVE, then CALCULATE. This is the only place Marketing KPIs
+        // are derived; every other surface reads these values.
+        const computation = computeMarketingKpis(submitted, kpis, marketingConfig);
+        setMarketingReports((prev) => [...prev.filter((r) => r.id !== submitted.id), submitted]);
+
+        // Steps 5-8: the shared pipeline. A KPI the registers could not derive is
+        // cleared rather than left displaying last month's figure as though it
+        // described this one, and any risk resting on that stale figure closes
+        // with it. This matters more here than in any other department: the demo
+        // data shows enquiries falling for five months, and leaving the previous
+        // month's number on screen would keep that visible without anything
+        // actually having been reported.
+        const cleared = clearSkippedKpis(computation.skipped, kpis, risks);
+        const kpiRun = runKpiSubmission(
+          computation.entries,
+          { kpis: cleared.kpis, risks: cleared.risks, actions },
+          submitted.reportingPeriod
+        );
+        setKpis(kpiRun.kpis);
+        setRisks(kpiRun.risks);
+        setActions(kpiRun.actions);
+
+        // Step 9: open the next cycle.
+        const cycleRun = runCycleSubmission(report.cycleId, submittedBy, nextDueDateOverride, cycles);
+        setCycles(cycleRun.cycles);
+
+        // Step 10: AUDIT. Which sections were actually reported is recorded,
+        // because "not applicable" and "complete" are different facts and only
+        // one of them means the department answered for it.
+        const derivedCount = computation.entries.length;
+        const skippedCount = computation.skipped.length;
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            submittedBy,
+            "marketing_report_submitted",
+            "Marketing",
+            `Marketing report submitted for ${report.reportingPeriod}: ${derivedCount} KPI(s) calculated, ${skippedCount} not derivable, source ${submitted.dataSource.kind}.`,
+            {
+              reportId: submitted.id,
+              cycleId: report.cycleId,
+              reportingPeriod: submitted.reportingPeriod,
+              dataSource: submitted.dataSource.kind,
+              kpisCalculated: derivedCount,
+              kpisSkipped: skippedCount,
+              sectionsReported: (Object.entries(validation.bySection) as [MarketingSectionKey, { state: string }][])
+                .filter(([, sec]) => sec.state === "complete")
+                .map(([key]) => key)
+                .join(", "),
+              nextDueDate: cycleRun.nextDueDate ?? null,
+            }
+          ),
+        ]);
+
+        return {
+          ok: true,
+          alerts: kpiRun.alerts,
+          computation,
+          nextDueDate: cycleRun.nextDueDate,
+          nextReportingPeriod: cycleRun.nextReportingPeriod,
+        };
+      },
       saveFinanceDraft: (report, actor) => {
         const stamped: FinanceReport = { ...report, status: "Draft", savedAt: new Date().toISOString() };
         setFinanceReports((prev) => [...prev.filter((r) => r.id !== report.id), stamped]);
@@ -1214,6 +1385,8 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       operationsConfig,
       farmingConfig,
       farmingReports,
+      marketingConfig,
+      marketingReports,
     ]
   );
 

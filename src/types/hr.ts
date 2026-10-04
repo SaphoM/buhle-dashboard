@@ -374,7 +374,10 @@ export type AuditAction =
   | "operations_import_failed"
   | "farming_draft_saved"
   | "farming_report_submitted"
-  | "farming_config_updated";
+  | "farming_config_updated"
+  | "marketing_draft_saved"
+  | "marketing_report_submitted"
+  | "marketing_config_updated";
 
 export interface AuditEntry {
   id: string;

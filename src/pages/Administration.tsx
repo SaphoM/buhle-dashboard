@@ -11,6 +11,13 @@ import {
   type MasterRecord,
 } from "../data/masterData";
 import type { Department, ReportingFrequency } from "../types";
+import type {
+  CampaignChannel,
+  EnquiryChannel,
+  EnquiryOutcome,
+  LeadSource,
+  PartnershipType,
+} from "../types/marketing";
 import { FINANCE_WORKBOOK_DEPENDENCY } from "../types/finance";
 import { FinanceWorkbookDependencyNotice } from "../components/dashboard/finance/FinanceSectionChrome";
 import { Tooltip } from "../components/common/Tooltip";
@@ -157,6 +164,8 @@ export function Administration() {
     updateFinanceConfig,
     operationsConfig,
     updateOperationsConfig,
+    marketingConfig,
+    updateMarketingConfig,
     auditLog,
   } =
     useDataStore();
@@ -645,6 +654,162 @@ export function Administration() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">
+          Marketing Configuration <span className="normal-case text-ink-soft/40">- what counts, and what may be named</span>
+        </h2>
+        <div className="card-surface flex flex-col gap-5 rounded-3xl border border-ink/10 p-6 shadow-sm">
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <p className="text-sm font-semibold text-ink">Six of the eight Marketing KPIs have no approved threshold</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-soft/50">
+              Only <span className="font-medium text-ink-soft/70">Student Enquiries</span> and{" "}
+              <span className="font-medium text-ink-soft/70">Enquiry to Enrolment Conversion</span> carry approved
+              limits, because those two were already on the dashboard before this submission existed and the demo data
+              already depends on the enquiry KPI. The six new figures report{" "}
+              <span className="font-medium text-ink-soft/70">Threshold not configured</span> rather than a
+              Green/Amber/Red verdict, because no limit has been approved for a marketing figure yet. Approving one in
+              the KPI threshold table above switches the Early Warning System on for that figure immediately, with no
+              code change.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <label className="flex max-w-sm flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Marketing reporting frequency</span>
+              <select
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={marketingConfig.reportingFrequency}
+                onChange={(e) =>
+                  updateMarketingConfig({
+                    reportingFrequency: e.target.value as typeof marketingConfig.reportingFrequency,
+                  })
+                }
+              >
+                {OPERATIONS_FREQUENCY_OPTIONS.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] text-ink-soft/40">
+                Drives the calculated next submission date for every Marketing cycle. Monthly is the default, because
+                enquiry volume moves on a timescale of days and a quarterly cadence would report the same pipeline for
+                three months and make it look stalled.
+              </span>
+            </label>
+
+            <label className="flex max-w-[120px] flex-col gap-1">
+              <span className="text-xs font-medium text-ink-soft/60">Currency symbol</span>
+              <input
+                type="text"
+                maxLength={3}
+                className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-sm text-ink"
+                value={marketingConfig.currencySymbol}
+                onChange={(e) => updateMarketingConfig({ currencySymbol: e.target.value })}
+              />
+              <span className="text-[11px] text-ink-soft/40">
+                Display only, for campaign spend and partnership value. Every amount is stored as a plain number, so
+                changing this changes presentation and never the figures.
+              </span>
+            </label>
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-ink/25 bg-white/40 p-4">
+            <p className="text-sm font-semibold text-ink">The outcome list is a policy decision, not a label list</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-soft/50">
+              The enquiry conversion rate is calculated from the outcome list below, so adding{" "}
+              <span className="font-medium text-ink-soft/70">Enrolled</span> to the approved outcomes immediately
+              changes what counts as a conversion, and removing it would drop every historical rate to zero. Only{" "}
+              <span className="font-medium text-ink-soft/70">Enrolled</span> is treated as converted;{" "}
+              <span className="font-medium text-ink-soft/70">Awaiting decision</span> and{" "}
+              <span className="font-medium text-ink-soft/70">Unreachable</span> are recorded outcomes that resolve
+              nothing, so they count in the denominator but not the numerator.{" "}
+              <span className="font-medium text-ink-soft/70">Duplicate</span> is excluded from the denominator
+              entirely, so a conversion rate cannot be improved by recording the same person twice. Duplicate, Awaiting
+              decision and Unreachable are part of the outcome vocabulary precisely so a person has somewhere honest to
+              record a contact they could not reach.
+            </p>
+          </div>
+
+          <CategoryList
+            title="Approved enquiry channels"
+            description="Where an enquiry came from. Drives the per-channel breakdown, so it is a closed list rather than free text."
+            items={marketingConfig.enquiryChannels.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateMarketingConfig({
+                enquiryChannels: marketingConfig.enquiryChannels.map((c, i) => (i === index ? (label as EnquiryChannel) : c)),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved enquiry outcomes"
+            description="The conversion rate is derived from this list. Editing it changes what a conversion means for every future submission."
+            items={marketingConfig.enquiryOutcomes.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateMarketingConfig({
+                enquiryOutcomes: marketingConfig.enquiryOutcomes.map((c, i) => (i === index ? (label as EnquiryOutcome) : c)),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved campaign channels"
+            description="How a campaign was run. The cost per enquiry comparison only works when every campaign names the channel it ran on."
+            items={marketingConfig.campaignChannels.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateMarketingConfig({
+                campaignChannels: marketingConfig.campaignChannels.map((c, i) => (i === index ? (label as CampaignChannel) : c)),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved lead sources"
+            description="The lead register's sources. One row per source per period, so the best and worst sources can be named from the data rather than asserted."
+            items={marketingConfig.leadSources.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateMarketingConfig({
+                leadSources: marketingConfig.leadSources.map((c, i) => (i === index ? (label as LeadSource) : c)),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved partnership types"
+            description="What kind of relationship a partner represents. A cash contribution with no recorded value is rejected at submission, because it quietly understates partnership value."
+            items={marketingConfig.partnershipTypes.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateMarketingConfig({
+                partnershipTypes: marketingConfig.partnershipTypes.map((c, i) => (i === index ? (label as PartnershipType) : c)),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved programmes"
+            description="The programmes an enquiry can be interested in. A value outside this list is rejected rather than silently accepted."
+            items={marketingConfig.programmes.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateMarketingConfig({
+                programmes: marketingConfig.programmes.map((c, i) => (i === index ? label : c)),
+              })
+            }
+          />
+
+          <CategoryList
+            title="Approved provinces"
+            description="Where an enquiry came from. A closed list, so the geographic read is comparable between months rather than depending on spelling."
+            items={marketingConfig.provinces.map((label) => ({ label }))}
+            onRename={(index, label) =>
+              updateMarketingConfig({
+                provinces: marketingConfig.provinces.map((c, i) => (i === index ? label : c)),
+              })
+            }
+          />
         </div>
       </section>
 
