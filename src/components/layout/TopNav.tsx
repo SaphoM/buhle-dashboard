@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { NAV_ITEMS } from "../../auth/permissions";
 import { useDataStore } from "../../data/DataStoreContext";
 import buhleWordmark from "../../assets/buhle-wordmark.png";
+import { MobileNavDrawer } from "./MobileNavDrawer";
 
 export function TopNav() {
   const { user, logout } = useAuth();
@@ -82,7 +83,12 @@ export function TopNav() {
         <img src={buhleWordmark} alt="Buhle Farmers' Academy" className="h-7 w-auto" />
       </div>
 
-      <div className="relative min-w-0 flex-1">
+      {/* Below md the pill bar cannot hold a dozen destinations legibly, so the
+          drawer takes over and this scroller is hidden rather than left as a
+          second, worse way to reach the same pages. */}
+      <MobileNavDrawer />
+
+      <div className="relative hidden min-w-0 flex-1 md:block">
         <nav
           ref={scrollerRef}
           onScroll={updateScrollState}
@@ -139,9 +145,10 @@ export function TopNav() {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        {/* Redundant in the drawer, which carries its own Risk Centre entry. */}
         <NavLink
           to="/risk-centre"
-          className="relative flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/80 shadow-sm hover:bg-white"
+          className="relative hidden h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/80 shadow-sm hover:bg-white md:flex"
           title={`${activeRiskCount} active risk${activeRiskCount === 1 ? "" : "s"}`}
         >
           🔔
