@@ -13,6 +13,7 @@ export const DEMO_USERS: AppUser[] = [
   { id: "u6", name: "Ayanda Zulu", email: "ayanda@buhle.demo", role: "hr", department: "Human Resources" },
   { id: "u7", name: "Karabo Molefe", email: "karabo@buhle.demo", role: "marketing", department: "Marketing" },
   { id: "u8", name: "Grace Mokoena", email: "grace@buhle.demo", role: "alumni", department: "Alumni" },
+  { id: "u10", name: "Thabo Molefe", email: "thabo@buhle.demo", role: "business_development", department: "Business Development" },
   { id: "u9", name: "System Admin", email: "admin@buhle.demo", role: "admin" },
 ];
 
