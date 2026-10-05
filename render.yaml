@@ -5,6 +5,7 @@ services:
     repo: https://github.com/SaphoM/buhle-dashboard
     branch: staging
     buildCommand: npm ci && npm run build
+    startCommand: echo "static"
     staticPublishPath: ./dist
     envVars:
       - key: VITE_BASE_PATH
