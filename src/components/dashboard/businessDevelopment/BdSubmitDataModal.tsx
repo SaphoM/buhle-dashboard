@@ -24,14 +24,21 @@ export function BdSubmitDataModal({ open, onClose, reportingPeriod, dueDate }: P
       onClose={onClose}
       title="Submit Business Development Data"
       size="lg"
-      primaryAction={{ label: "Save Draft", onClick: () => {} }}
-      secondaryActions={[{ label: "Cancel", onClick: onClose }]}
     >
       <div className="space-y-4">
         <p className="text-sm text-ink-soft/70">
           Business Development submission modal scaffolded. Reporting period: {report.reportingPeriod || "TBD"}
         </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm rounded bg-ink/5 text-ink hover:bg-ink/10">
+            Cancel
+          </button>
+          <button onClick={() => {}} className="px-3 py-1.5 text-sm rounded bg-brand text-white hover:bg-brand-strong">
+            Save Draft
+          </button>
+        </div>
       </div>
     </Modal>
+  );
   );
 }
