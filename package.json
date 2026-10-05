@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "prepare": "git config core.hooksPath .githooks",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "start": "vite preview --port $PORT --host"
   },
   "dependencies": {
     "react": "^19.2.8",
