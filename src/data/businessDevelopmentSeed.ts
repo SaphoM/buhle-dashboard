@@ -66,8 +66,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-    description: "Active opportunities (excluding Won/Lost/Closed)",
-    frequency: "Monthly",
+        frequency: "Monthly",
     executiveKpi: true,
   },
   {
@@ -83,8 +82,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-    description: "Sum of estimated value of active opportunities",
-    frequency: "Monthly",
+        frequency: "Monthly",
     executiveKpi: true,
   },
   {
@@ -100,8 +98,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-    description: "Estimated value × probability",
-    frequency: "Monthly",
+        frequency: "Monthly",
     executiveKpi: false,
   },
   {
@@ -117,8 +114,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-    description: "New leads received during reporting period",
-    frequency: "Monthly",
+        frequency: "Monthly",
     executiveKpi: false,
   },
   {
@@ -134,8 +130,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-    description: "Proposals submitted during reporting period",
-    frequency: "Monthly",
+        frequency: "Monthly",
     executiveKpi: false,
   },
   {
@@ -151,8 +146,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-    description: "Won proposals / Total decided proposals",
-    frequency: "Monthly",
+        frequency: "Monthly",
     executiveKpi: false,
   },
   {
@@ -168,8 +162,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-    description: "Total value of opportunities won during reporting period",
-    frequency: "Monthly",
+        frequency: "Monthly",
     executiveKpi: true,
   },
   {
@@ -185,8 +178,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-    description: "Number of unique clients won during reporting period",
-    frequency: "Monthly",
+        frequency: "Monthly",
     executiveKpi: true,
   },
   {
@@ -202,8 +194,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-    description: "Won business value - distinct from Finance actual revenue",
-    frequency: "Monthly",
+        frequency: "Monthly",
     executiveKpi: false,
   },
 ];
