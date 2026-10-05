@@ -16,6 +16,9 @@ const Farming = lazy(() => import("./pages/Farming").then((m) => ({ default: m.F
 const Hr = lazy(() => import("./pages/Hr").then((m) => ({ default: m.Hr })));
 const Marketing = lazy(() => import("./pages/Marketing").then((m) => ({ default: m.Marketing })));
 const Alumni = lazy(() => import("./pages/Alumni").then((m) => ({ default: m.Alumni })));
+const BusinessDevelopment = lazy(() =>
+  import("./pages/BusinessDevelopment").then((m) => ({ default: m.BusinessDevelopment })),
+);
 const RiskCentre = lazy(() => import("./pages/RiskCentre").then((m) => ({ default: m.RiskCentre })));
 const CorrectiveActions = lazy(() =>
   import("./pages/CorrectiveActions").then((m) => ({ default: m.CorrectiveActions })),
@@ -80,6 +83,7 @@ function AppRoutes() {
       <Route path="/hr" element={<Protected path="/hr"><Hr /></Protected>} />
       <Route path="/marketing" element={<Protected path="/marketing"><Marketing /></Protected>} />
       <Route path="/alumni" element={<Protected path="/alumni"><Alumni /></Protected>} />
+      <Route path="/business-development" element={<Protected path="/business-development"><BusinessDevelopment /></Protected>} />
       <Route path="/risk-centre" element={<Protected path="/risk-centre"><RiskCentre /></Protected>} />
       <Route path="/actions" element={<Protected path="/actions"><CorrectiveActions /></Protected>} />
       <Route path="/reports" element={<Protected path="/reports"><Reports /></Protected>} />

@@ -12,7 +12,7 @@ export type Role =
   | "farm"
   | "hr"
   | "marketing"
-  | "alumni"
+  | "alumni" | "business_development"
   | "admin";
 
 export interface AppUser {
@@ -30,7 +30,8 @@ export type Department =
   | "Commercial Farming"
   | "Human Resources"
   | "Marketing"
-  | "Alumni";
+  | "Alumni"
+  | "Business Development";
 
 // "no_data" is distinct from "green": a KPI with nothing submitted for the
 // current period must never read as on-target. See Section 24 of the brief -
