@@ -40,5 +40,4 @@ export function BdSubmitDataModal({ open, onClose, reportingPeriod, dueDate }: P
       </div>
     </Modal>
   );
-  );
 }
