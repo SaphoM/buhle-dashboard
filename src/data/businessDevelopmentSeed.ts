@@ -66,7 +66,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-        frequency: "Monthly",
+        measurementFrequency: "monthly",
     executiveKpi: true,
   },
   {
@@ -82,7 +82,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-        frequency: "Monthly",
+        measurementFrequency: "monthly",
     executiveKpi: true,
   },
   {
@@ -98,7 +98,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-        frequency: "Monthly",
+        measurementFrequency: "monthly",
     executiveKpi: false,
   },
   {
@@ -114,7 +114,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-        frequency: "Monthly",
+        measurementFrequency: "monthly",
     executiveKpi: false,
   },
   {
@@ -130,7 +130,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-        frequency: "Monthly",
+        measurementFrequency: "monthly",
     executiveKpi: false,
   },
   {
@@ -146,7 +146,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-        frequency: "Monthly",
+        measurementFrequency: "monthly",
     executiveKpi: false,
   },
   {
@@ -162,7 +162,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-        frequency: "Monthly",
+        measurementFrequency: "monthly",
     executiveKpi: true,
   },
   {
@@ -178,7 +178,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-        frequency: "Monthly",
+        measurementFrequency: "monthly",
     executiveKpi: true,
   },
   {
@@ -194,7 +194,7 @@ export const BD_SUBMISSION_KPIS: Kpi[] = [
     lowerIsBetter: false,
         dataAvailable: true,
     notAvailableReason: undefined,
-        frequency: "Monthly",
+        measurementFrequency: "monthly",
     executiveKpi: false,
   },
 ];
