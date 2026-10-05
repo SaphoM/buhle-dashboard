@@ -17,6 +17,7 @@ const RISK_CATEGORY_BY_DEPARTMENT: Record<Department, RiskCategory> = {
   "Human Resources": "HR",
   Marketing: "Marketing",
   Alumni: "Alumni",
+  "Business Development": "Financial",
 };
 
 /** A risk auto-raised by the EWS engine always uses this id, one per KPI, so

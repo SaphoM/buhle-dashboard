@@ -1,5 +1,4 @@
 // Business Development types - MVP proposed KPIs
-import type { Kpi, ReportingFrequency } from "./index";
 
 export const BUSINESS_DEVELOPMENT_DEPARTMENT = "Business Development" as const;
 
