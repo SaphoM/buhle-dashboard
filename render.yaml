@@ -2,6 +2,7 @@ services:
   - type: web
     name: buhle-dashboard-staging
     runtime: static
+    repo: https://github.com/SaphoM/buhle-dashboard
     branch: staging
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
