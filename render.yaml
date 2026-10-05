@@ -1,6 +1,5 @@
-# Render blueprint for the staging deploy.
 services:
-  - type: static_site
+  - type: web
     name: buhle-dashboard-staging
     env: static
     branch: staging
