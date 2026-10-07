@@ -23,13 +23,19 @@ import { FarmingHealthSummary } from "./farming/FarmingHealthSummary";
 import { AlumniSubmitDataModal } from "./AlumniSubmitDataModal";
 import { AlumniHealthSummary } from "./alumni/AlumniHealthSummary";
 import { MarketingHealthSummary } from "./marketing/MarketingHealthSummary";
+import { AcademySubmitDataModal } from "./AcademySubmitDataModal";
+import { AcademyHealthSummary } from "./academy/AcademyHealthSummary";
 
 export function DepartmentDashboard({
   department,
   description,
+  embedded = false,
 }: {
   department: Department;
   description: string;
+  /** Rendered inside a combined page (e.g. Academy & Alumni) that owns the
+   *  page heading, so this dashboard's title becomes a section heading. */
+  embedded?: boolean;
 }) {
   const { kpis: allKpis, cycles: allCycles, risks: allRisks, actions: allActions } = useDataStore();
   const [modalOpen, setModalOpen] = useState(false);
@@ -62,6 +68,10 @@ export function DepartmentDashboard({
   // none of which owns a headline number on its own, because every Alumni figure
   // is a rate over the graduates who answered rather than a count of something.
   const usesAlumniSubmission = department === "Alumni";
+  // Academy reports through its own four registers (programmes, intakes,
+  // assessments, certification) for the same reason: every Academy rate is
+  // derived from rows, so the flat KPI form would let someone type one.
+  const usesAcademySubmission = department === "Academy";
   const kpis = allKpis.filter((k) => k.department === department);
   const allDeptRisks = allRisks.filter((r) => r.department === department);
   const risks = allDeptRisks.filter((r) => r.status !== "Resolved");
@@ -99,7 +109,11 @@ export function DepartmentDashboard({
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">{department}</h1>
+          {embedded ? (
+            <h2 className="text-xl font-bold tracking-tight text-ink">{department}</h2>
+          ) : (
+            <h1 className="text-2xl font-bold tracking-tight text-ink">{department}</h1>
+          )}
           <p className="text-sm text-ink-soft/60">{description}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -112,7 +126,11 @@ export function DepartmentDashboard({
               ? "Submit HR Data"
               : usesFinanceSubmission
                 ? "Submit Finance Data"
-                : "Submit Data"}
+                : usesAcademySubmission
+                  ? "Submit Academy Data"
+                  : usesAlumniSubmission
+                    ? "Submit Alumni Data"
+                    : "Submit Data"}
           </button>
         </div>
       </div>
@@ -373,6 +391,10 @@ export function DepartmentDashboard({
           registers hold rows so a thin study cannot read as a finished one. */}
       {department === "Alumni" && <AlumniHealthSummary />}
 
+      {/* Academy states its headline academic figures, the register each came
+          from, and how many of its four registers hold rows. */}
+      {department === "Academy" && <AcademyHealthSummary />}
+
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">Key Performance Indicators</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -440,6 +462,8 @@ export function DepartmentDashboard({
         <FarmingSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : usesAlumniSubmission ? (
         <AlumniSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      ) : usesAcademySubmission ? (
+        <AcademySubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : (
         <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
       )}

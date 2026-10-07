@@ -16,7 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/farming", label: "Commercial Farming", shortLabel: "Farming", roles: ["executive", "farm", "admin"] },
   { path: "/hr", label: "Human Resources", shortLabel: "HR", roles: ["executive", "hr", "admin"] },
   { path: "/marketing", label: "Marketing", shortLabel: "Marketing", roles: ["executive", "marketing", "admin"] },
-  { path: "/alumni", label: "Alumni", shortLabel: "Alumni", roles: ["executive", "alumni", "business_development", "admin"] },
+  { path: "/alumni", label: "Academy & Alumni", shortLabel: "Academy & Alumni", roles: ["executive", "alumni", "business_development", "admin"] },
   { path: "/business-development", label: "Business Development", shortLabel: "BD", roles: ["executive", "business_development", "admin"] },
   {
     path: "/risk-centre",

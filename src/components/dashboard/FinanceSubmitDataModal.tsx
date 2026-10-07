@@ -37,6 +37,7 @@ const DEPARTMENT_OPTIONS: Department[] = [
   "Commercial Farming",
   "Human Resources",
   "Marketing",
+  "Academy",
   "Alumni",
 ];
 

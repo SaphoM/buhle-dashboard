@@ -11,7 +11,7 @@ const roleLabels: Record<string, string> = {
   farm: "Farm Management",
   hr: "Human Resources",
   marketing: "Marketing",
-  alumni: "Alumni",
+  alumni: "Academy & Alumni",
   business_development: "Business Development",
   admin: "System Administrator",
 };

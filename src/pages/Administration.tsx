@@ -41,6 +41,7 @@ const KPI_DEPARTMENT_TABS: { label: string; department: Department | "all" }[] =
   { label: "Farming", department: "Commercial Farming" },
   { label: "HR", department: "Human Resources" },
   { label: "Marketing", department: "Marketing" },
+  { label: "Academy", department: "Academy" },
   { label: "Alumni", department: "Alumni" },
 ];
 

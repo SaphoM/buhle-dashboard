@@ -380,7 +380,9 @@ export type AuditAction =
   | "marketing_config_updated"
   | "alumni_draft_saved"
   | "alumni_report_submitted"
-  | "alumni_config_updated";
+  | "alumni_config_updated"
+  | "academy_draft_saved"
+  | "academy_report_submitted";
 
 export interface AuditEntry {
   id: string;

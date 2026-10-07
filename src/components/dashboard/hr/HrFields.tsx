@@ -226,6 +226,7 @@ export const DEPARTMENT_OPTIONS: readonly Department[] = [
   "Commercial Farming",
   "Human Resources",
   "Marketing",
+  "Academy",
   "Alumni",
 ];
 

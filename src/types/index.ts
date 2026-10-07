@@ -30,6 +30,7 @@ export type Department =
   | "Commercial Farming"
   | "Human Resources"
   | "Marketing"
+  | "Academy"
   | "Alumni"
   | "Business Development";
 

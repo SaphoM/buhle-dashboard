@@ -372,7 +372,19 @@ export function ExecutiveOverview() {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">Strategic KPIs</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {strategicKpis.map((k) => (
-            <KpiCard key={k.id} kpi={k} linkTo={`/${k.department === "Commercial Farming" ? "farming" : k.department.toLowerCase()}`} />
+            <KpiCard
+              key={k.id}
+              kpi={k}
+              linkTo={
+                k.department === "Commercial Farming"
+                  ? "/farming"
+                  : k.department === "Academy"
+                    ? "/alumni"
+                    : k.department === "Alumni"
+                      ? "/alumni?view=alumni"
+                      : `/${k.department.toLowerCase()}`
+              }
+            />
           ))}
         </div>
       </section>

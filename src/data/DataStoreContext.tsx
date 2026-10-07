@@ -35,6 +35,15 @@ import type { AlumniConfig, AlumniReport, AlumniSectionKey } from "../types/alum
 import { computeAlumniKpis, type AlumniComputation } from "./alumniEngine";
 import { validateAlumniReport } from "./alumniValidation";
 import { ALUMNI_SUBMISSION_KPIS, DEFAULT_ALUMNI_CONFIG } from "./alumniSeed";
+import type { AcademyConfig, AcademyReport, AcademySectionKey } from "../types/academy";
+import { computeAcademyKpis, type AcademyComputation } from "./academyEngine";
+import { validateAcademyReport, type AcademyValidationIssue } from "./academyValidation";
+import {
+  ACADEMY_DEMO_RISKS,
+  ACADEMY_SUBMISSION_KPIS,
+  DEFAULT_ACADEMY_CONFIG,
+  createDemoAcademyDraft,
+} from "./academySeed";
 
 // The HR submission owns four KPIs that predate it in name only - they become
 // reportable the moment HR submits the underlying records. Finance is the
@@ -109,6 +118,9 @@ export interface DataStoreValue {
   marketingReports: MarketingReport[];
   /** Alumni tracer-study submissions, one per reporting cycle. */
   alumniReports: AlumniReport[];
+  /** Academy submissions (programmes, intakes, assessments, certification),
+   *  one per reporting cycle. Owned by the same manager as Alumni. */
+  academyReports: AcademyReport[];
   /** Employee registry - the single source for employee identity (Section 26). */
   employees: Employee[];
   /** Append-only record of every consequential change (Section 19, step 12). */
@@ -144,6 +156,9 @@ export interface DataStoreValue {
    *  Early Warning - it governs how boldly the department may present its own
    *  numbers. */
   alumniConfig: AlumniConfig;
+  /** Academy: the approved accreditation, programme, assessment-result and
+   *  certification vocabularies, plus the reporting cadence. */
+  academyConfig: AcademyConfig;
   /**
    * Records values for one or more KPIs in a single atomic step - clears
    * "no data", shifts history forward, then reacts: creates/escalates/
@@ -314,6 +329,26 @@ export interface DataStoreValue {
         attentionIssues: ReturnType<typeof validateAlumniReport>["attentionIssues"];
       }
   >;
+  /** Saves Academy register progress without submitting, and without touching
+   *  KPIs or Early Warning. */
+  saveAcademyDraft: (report: AcademyReport, actor: string) => void;
+  /** The full Academy chain, identical in shape to the other register
+   *  departments: validate -> save -> calculate KPIs -> RAG -> evaluate EWS ->
+   *  create/update risks -> open the next cycle -> audit. */
+  submitAcademyReport: (
+    report: AcademyReport,
+    submittedBy: string,
+    nextDueDateOverride?: string
+  ) => Promise<
+    | {
+        ok: true;
+        alerts: EwsAlert[];
+        computation: AcademyComputation;
+        nextDueDate?: string;
+        nextReportingPeriod?: string;
+      }
+    | { ok: false; issues: AcademyValidationIssue[] }
+  >;
   saveFinanceDraft: (report: FinanceReport, actor: string) => void;
   /**
    * Records a workbook import against a Finance report (Section 26). Kept
@@ -391,6 +426,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       // carries its thresholds through. Only the twelve new figures are appended,
       // and they ship without limits rather than with invented ones.
       ...ALUMNI_SUBMISSION_KPIS.filter((ak) => !INITIAL_KPIS.some((k) => k.id === ak.id)),
+      ...ACADEMY_SUBMISSION_KPIS.filter((ak) => !INITIAL_KPIS.some((k) => k.id === ak.id)),
     ].map(
       (kpi) =>
         kpi.id === HR_KPI_IDS.performance
@@ -417,10 +453,11 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       }
       if (c.department === "Marketing") return { ...c, frequency: DEFAULT_MARKETING_CONFIG.reportingFrequency };
       if (c.department === "Alumni") return { ...c, frequency: DEFAULT_ALUMNI_CONFIG.reportingFrequency };
+      if (c.department === "Academy") return { ...c, frequency: DEFAULT_ACADEMY_CONFIG.reportingFrequency };
       return c;
     })
   );
-  const [risks, setRisks] = useState<Risk[]>(DEMO_RISKS);
+  const [risks, setRisks] = useState<Risk[]>(() => [...DEMO_RISKS, ...ACADEMY_DEMO_RISKS]);
   const [actions, setActions] = useState<CorrectiveAction[]>(DEMO_ACTIONS);
   const [hrReports, setHrReports] = useState<HrReport[]>([]);
   const [financeReports, setFinanceReports] = useState<FinanceReport[]>([]);
@@ -428,6 +465,10 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [farmingReports, setFarmingReports] = useState<FarmingReport[]>([]);
   const [marketingReports, setMarketingReports] = useState<MarketingReport[]>([]);
   const [alumniReports, setAlumniReports] = useState<AlumniReport[]>([]);
+  // Seeded with a demo draft for the open Academy cycle, so the submission
+  // opens with sample rows. A draft never counts towards the KPIs.
+  const [academyReports, setAcademyReports] = useState<AcademyReport[]>(() => [createDemoAcademyDraft()]);
+  const academyConfig = DEFAULT_ACADEMY_CONFIG;
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
 
@@ -607,6 +648,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       farmingReports,
       marketingReports,
       alumniReports,
+      academyReports,
       employees,
       auditLog,
       hrConfig,
@@ -615,6 +657,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       farmingConfig,
       marketingConfig,
       alumniConfig,
+      academyConfig,
       submitKpiValues: (entries) => {
         // No reporting period is claimed here: this path has no report behind
         // it, so guessing one would attach the wrong period to any risk it
@@ -1275,6 +1318,88 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           nextReportingPeriod: cycleRun.nextReportingPeriod,
         };
       },
+      saveAcademyDraft: (report, actor) => {
+        const stamped: AcademyReport = { ...report, status: "Draft", savedAt: new Date().toISOString() };
+        setAcademyReports((prev) => [...prev.filter((r) => r.id !== report.id), stamped]);
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(actor, "academy_draft_saved", "Academy", `Draft saved for ${report.reportingPeriod}.`, {
+            reportId: report.id,
+            cycleId: report.cycleId,
+          }),
+        ]);
+      },
+      submitAcademyReport: async (report, submittedBy, nextDueDateOverride) => {
+        // Step 1: VALIDATE. Refusal, not acceptance-with-caveats: every Academy
+        // KPI is derived from these rows.
+        const validation = validateAcademyReport(report, { config: academyConfig });
+        if (!validation.valid) {
+          return { ok: false, issues: validation.issues };
+        }
+
+        const now = new Date().toISOString();
+        const submitted: AcademyReport = {
+          ...report,
+          status: "Submitted",
+          submittedAt: now,
+          submittedBy,
+          savedAt: undefined,
+          dataSource: { kind: "Manual Entry", enteredBy: submittedBy, enteredAt: now },
+        };
+
+        // Steps 2-4: SAVE, then CALCULATE.
+        const computation = computeAcademyKpis(submitted, kpis, academyConfig);
+        setAcademyReports((prev) => [...prev.filter((r) => r.id !== submitted.id), submitted]);
+
+        // Steps 5-8: the shared pipeline. A KPI the registers could not derive is
+        // cleared rather than left showing last quarter's figure.
+        const cleared = clearSkippedKpis(computation.skipped, kpis, risks);
+        const kpiRun = runKpiSubmission(
+          computation.entries,
+          { kpis: cleared.kpis, risks: cleared.risks, actions },
+          submitted.reportingPeriod
+        );
+        setKpis(kpiRun.kpis);
+        setRisks(kpiRun.risks);
+        setActions(kpiRun.actions);
+
+        // Step 9: open the next cycle.
+        const cycleRun = runCycleSubmission(report.cycleId, submittedBy, nextDueDateOverride, cycles);
+        setCycles(cycleRun.cycles);
+
+        // Step 10: AUDIT.
+        const derivedCount = computation.entries.length;
+        const skippedCount = computation.skipped.length;
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            submittedBy,
+            "academy_report_submitted",
+            "Academy",
+            `Academy report submitted for ${report.reportingPeriod}: ${derivedCount} KPI(s) calculated, ${skippedCount} not derivable.`,
+            {
+              reportId: submitted.id,
+              cycleId: report.cycleId,
+              reportingPeriod: submitted.reportingPeriod,
+              kpisCalculated: derivedCount,
+              kpisSkipped: skippedCount,
+              sectionsReported: (Object.entries(validation.bySection) as [AcademySectionKey, { state: string }][])
+                .filter(([, sec]) => sec.state === "complete")
+                .map(([key]) => key)
+                .join(", "),
+              nextDueDate: cycleRun.nextDueDate ?? null,
+            }
+          ),
+        ]);
+
+        return {
+          ok: true,
+          alerts: kpiRun.alerts,
+          computation,
+          nextDueDate: cycleRun.nextDueDate,
+          nextReportingPeriod: cycleRun.nextReportingPeriod,
+        };
+      },
       updateAlumniConfig: (updates: Partial<AlumniConfig>) => {
         setAlumniConfig((prev) => ({ ...prev, ...updates }));
 
@@ -1616,6 +1741,8 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       marketingReports,
       alumniConfig,
       alumniReports,
+      academyConfig,
+      academyReports,
     ]
   );
 

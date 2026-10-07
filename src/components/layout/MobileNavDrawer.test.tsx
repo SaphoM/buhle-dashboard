@@ -103,7 +103,7 @@ describe("MobileNavDrawer", () => {
       "Commercial Farming",
       "Human Resources",
       "Marketing",
-      "Alumni",
+      "Academy & Alumni",
       "Early Warning / Risk Centre",
       "Corrective Actions",
       "Reports",
@@ -122,7 +122,7 @@ describe("MobileNavDrawer", () => {
     renderDrawer();
     const panel = await open(user);
 
-    await user.click(within(panel).getByRole("link", { name: "Alumni" }));
+    await user.click(within(panel).getByRole("link", { name: "Academy & Alumni" }));
 
     expect(screen.queryByRole("dialog", { name: "Navigation menu" })).toBeNull();
   });
@@ -181,7 +181,7 @@ describe("MobileNavDrawer", () => {
 
     expect(within(panel).getByRole("link", { name: "Finance" })).not.toBeNull();
     expect(within(panel).queryByRole("link", { name: "Marketing" })).toBeNull();
-    expect(within(panel).queryByRole("link", { name: "Alumni" })).toBeNull();
+    expect(within(panel).queryByRole("link", { name: "Academy & Alumni" })).toBeNull();
     // Still available to everyone.
     expect(within(panel).getByRole("link", { name: "Reports" })).not.toBeNull();
   });

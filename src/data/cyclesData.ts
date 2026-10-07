@@ -132,6 +132,22 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     primaryKpiId: "kpi-enquiries",
   },
   {
+    cycleId: "cyc-academy-2026-q3",
+    department: "Academy",
+    dataset: "Academy Pack (Programmes, Intakes, Assessments, Certification)",
+    description:
+      "Programme accreditation, intake applications and registrations, assessment outcomes and moderation, and certification/graduation for the quarter.",
+    frequency: "Quarterly",
+    reportingPeriod: "Q3 2026",
+    startDate: "2026-07-01",
+    dueDate: "2026-10-15",
+    status: "In Progress",
+    owner: "Academy & Alumni Manager",
+    completionPct: 60,
+    notes: "Demo draft saved - owned by the Academy & Alumni manager alongside the Alumni tracer study.",
+    primaryKpiId: "kpi-academy-certification-rate",
+  },
+  {
     cycleId: "cyc-alumni-2026-h2",
     department: "Alumni",
     dataset: "Tracer Survey",

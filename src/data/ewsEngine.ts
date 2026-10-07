@@ -16,6 +16,7 @@ const RISK_CATEGORY_BY_DEPARTMENT: Record<Department, RiskCategory> = {
   "Commercial Farming": "Farming",
   "Human Resources": "HR",
   Marketing: "Marketing",
+  Academy: "Academic",
   Alumni: "Alumni",
   "Business Development": "Financial",
 };
