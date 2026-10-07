@@ -1,5 +1,7 @@
 // Business Development types - MVP proposed KPIs
 
+import type { ReportingFrequency } from "./index";
+
 export const BUSINESS_DEVELOPMENT_DEPARTMENT = "Business Development" as const;
 
 export const BD_SECTION_KEYS = [
@@ -24,7 +26,30 @@ export const BD_SECTION_LABELS: Record<BdSectionKey, string> = {
   commentary: "Commentary",
 };
 
+/** One-line explanation shown on each section, so a manager knows what the
+ *  register is for before opening it. */
+export const BD_SECTION_PURPOSE: Record<BdSectionKey, string> = {
+  leads: "Who asked about Buhle this period, where they came from, and what happened next.",
+  opportunities: "Live deals, their value, how likely they are to close, and how long since anyone touched them.",
+  proposals: "Proposals actually sent, and which of the decided ones were won.",
+  newBusiness: "Contracts won, what they are worth, and when they started.",
+  clients: "New paying clients brought in through the work above.",
+  partnerships: "Partners in discussion or live, and what each is worth to Buhle.",
+  commentary:
+    "The written half of the submission: the wins, the losses, what is stuck and what support is needed.",
+};
+
 export type BdSectionState = "complete" | "incomplete" | "attention" | "not_available" | "not_applicable";
+
+export type BdReportStatus = "Not Submitted" | "Draft" | "Submitted";
+
+export type BdSourceKind = "Manual Entry" | "Not Submitted";
+
+export interface BdDataSource {
+  kind: BdSourceKind;
+  enteredBy?: string;
+  enteredAt?: string;
+}
 
 export interface BdSectionEnvelope {
   commentary: string;
@@ -165,11 +190,17 @@ export interface BdCommentaryData extends BdSectionEnvelope {
 
 export interface BdReport {
   reportId: string;
+  /** The reporting cycle this report answers. One report per cycle, matched by
+   *  this id the same way every other department's reports are matched. */
+  cycleId: string;
   department: typeof BUSINESS_DEVELOPMENT_DEPARTMENT;
   reportingPeriod: string;
   dueDate: string;
+  status: BdReportStatus;
+  savedAt?: string;
   submittedAt?: string;
   submittedBy?: string;
+  dataSource?: BdDataSource;
   leads: BdLeadsData;
   opportunities: BdOpportunitiesData;
   proposals: BdProposalsData;
@@ -200,11 +231,16 @@ export const BD_KPI_IDS = {
 
 export interface BdConfig {
   leadSources: readonly LeadSource[] | string[];
+  /** What may be recorded as a lead's status. Kept in configuration rather
+   *  than in the validation code, because "what counts as converted" is a
+   *  policy question that belongs in Administration. */
+  leadStatuses: string[];
   opportunityStages: readonly OpportunityStage[] | string[];
   proposalStatuses: readonly ProposalStatus[] | string[];
   partnershipStatuses: readonly PartnershipStatus[] | string[];
   opportunityTypes: string[];
   businessCategories: string[];
+  reportingFrequency: ReportingFrequency;
   stalledThresholdDays: number;
   greenTargetOverride: number | null;
 }

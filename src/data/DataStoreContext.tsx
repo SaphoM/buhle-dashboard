@@ -44,6 +44,10 @@ import {
   DEFAULT_ACADEMY_CONFIG,
   createDemoAcademyDraft,
 } from "./academySeed";
+import type { BdConfig, BdReport, BdSectionKey } from "../types/businessDevelopment";
+import { computeBdKpis, type BdComputation } from "./businessDevelopmentEngine";
+import { validateBdReport, type BdValidationIssue } from "./businessDevelopmentValidation";
+import { BD_SUBMISSION_KPIS, DEFAULT_BD_CONFIG, createDemoBdDraft } from "./businessDevelopmentSeed";
 
 // The HR submission owns four KPIs that predate it in name only - they become
 // reportable the moment HR submits the underlying records. Finance is the
@@ -121,6 +125,9 @@ export interface DataStoreValue {
   /** Academy submissions (programmes, intakes, assessments, certification),
    *  one per reporting cycle. Owned by the same manager as Alumni. */
   academyReports: AcademyReport[];
+  /** Business Development submissions (leads, opportunities, proposals, new
+   *  business, clients, partnerships), one per reporting cycle. */
+  bdReports: BdReport[];
   /** Employee registry - the single source for employee identity (Section 26). */
   employees: Employee[];
   /** Append-only record of every consequential change (Section 19, step 12). */
@@ -159,6 +166,9 @@ export interface DataStoreValue {
   /** Academy: the approved accreditation, programme, assessment-result and
    *  certification vocabularies, plus the reporting cadence. */
   academyConfig: AcademyConfig;
+  /** BD: approved lead sources and statuses, stages, proposal statuses, the
+   *  reporting cadence and the stall threshold the engine measures against. */
+  bdConfig: BdConfig;
   /**
    * Records values for one or more KPIs in a single atomic step - clears
    * "no data", shifts history forward, then reacts: creates/escalates/
@@ -349,6 +359,26 @@ export interface DataStoreValue {
       }
     | { ok: false; issues: AcademyValidationIssue[] }
   >;
+  /** Saves Business Development register progress without submitting, and
+   *  without touching KPIs or Early Warning. */
+  saveBdDraft: (report: BdReport, actor: string) => void;
+  /** The full BD chain, identical in shape to the other register departments:
+   *  validate -> save -> calculate KPIs -> RAG -> evaluate EWS -> create/update
+   *  risks -> open the next cycle -> audit. */
+  submitBdReport: (
+    report: BdReport,
+    submittedBy: string,
+    nextDueDateOverride?: string
+  ) => Promise<
+    | {
+        ok: true;
+        alerts: EwsAlert[];
+        computation: BdComputation;
+        nextDueDate?: string;
+        nextReportingPeriod?: string;
+      }
+    | { ok: false; issues: BdValidationIssue[] }
+  >;
   saveFinanceDraft: (report: FinanceReport, actor: string) => void;
   /**
    * Records a workbook import against a Finance report (Section 26). Kept
@@ -427,6 +457,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       // and they ship without limits rather than with invented ones.
       ...ALUMNI_SUBMISSION_KPIS.filter((ak) => !INITIAL_KPIS.some((k) => k.id === ak.id)),
       ...ACADEMY_SUBMISSION_KPIS.filter((ak) => !INITIAL_KPIS.some((k) => k.id === ak.id)),
+      ...BD_SUBMISSION_KPIS.filter((bk) => !INITIAL_KPIS.some((k) => k.id === bk.id)),
     ].map(
       (kpi) =>
         kpi.id === HR_KPI_IDS.performance
@@ -454,6 +485,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       if (c.department === "Marketing") return { ...c, frequency: DEFAULT_MARKETING_CONFIG.reportingFrequency };
       if (c.department === "Alumni") return { ...c, frequency: DEFAULT_ALUMNI_CONFIG.reportingFrequency };
       if (c.department === "Academy") return { ...c, frequency: DEFAULT_ACADEMY_CONFIG.reportingFrequency };
+      if (c.department === "Business Development") return { ...c, frequency: DEFAULT_BD_CONFIG.reportingFrequency };
       return c;
     })
   );
@@ -469,6 +501,10 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   // opens with sample rows. A draft never counts towards the KPIs.
   const [academyReports, setAcademyReports] = useState<AcademyReport[]>(() => [createDemoAcademyDraft()]);
   const academyConfig = DEFAULT_ACADEMY_CONFIG;
+  // Seeded with a demo draft for the open BD cycle, so the submission opens
+  // with sample rows. A draft never counts towards the KPIs.
+  const [bdReports, setBdReports] = useState<BdReport[]>(() => [createDemoBdDraft()]);
+  const bdConfig = DEFAULT_BD_CONFIG;
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
 
@@ -649,6 +685,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       marketingReports,
       alumniReports,
       academyReports,
+      bdReports,
       employees,
       auditLog,
       hrConfig,
@@ -658,6 +695,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       marketingConfig,
       alumniConfig,
       academyConfig,
+      bdConfig,
       submitKpiValues: (entries) => {
         // No reporting period is claimed here: this path has no report behind
         // it, so guessing one would attach the wrong period to any risk it
@@ -1400,6 +1438,88 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
           nextReportingPeriod: cycleRun.nextReportingPeriod,
         };
       },
+      saveBdDraft: (report, actor) => {
+        const stamped: BdReport = { ...report, status: "Draft", savedAt: new Date().toISOString() };
+        setBdReports((prev) => [...prev.filter((r) => r.reportId !== report.reportId), stamped]);
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(actor, "bd_draft_saved", "Business Development", `Draft saved for ${report.reportingPeriod}.`, {
+            reportId: report.reportId,
+            cycleId: report.cycleId,
+          }),
+        ]);
+      },
+      submitBdReport: async (report, submittedBy, nextDueDateOverride) => {
+        // Step 1: VALIDATE. Refusal, not acceptance-with-caveats: every BD KPI
+        // is derived from these six registers.
+        const validation = validateBdReport(report, { config: bdConfig });
+        if (!validation.valid) {
+          return { ok: false, issues: validation.issues };
+        }
+
+        const now = new Date().toISOString();
+        const submitted: BdReport = {
+          ...report,
+          status: "Submitted",
+          submittedAt: now,
+          submittedBy,
+          savedAt: undefined,
+          dataSource: { kind: "Manual Entry", enteredBy: submittedBy, enteredAt: now },
+        };
+
+        // Steps 2-4: SAVE, then CALCULATE.
+        const computation = computeBdKpis(submitted, kpis, bdConfig);
+        setBdReports((prev) => [...prev.filter((r) => r.reportId !== submitted.reportId), submitted]);
+
+        // Steps 5-8: the shared pipeline. A KPI the registers could not derive
+        // is cleared rather than left showing last month's figure.
+        const cleared = clearSkippedKpis(computation.skipped, kpis, risks);
+        const kpiRun = runKpiSubmission(
+          computation.entries,
+          { kpis: cleared.kpis, risks: cleared.risks, actions },
+          submitted.reportingPeriod
+        );
+        setKpis(kpiRun.kpis);
+        setRisks(kpiRun.risks);
+        setActions(kpiRun.actions);
+
+        // Step 9: open the next cycle.
+        const cycleRun = runCycleSubmission(report.cycleId, submittedBy, nextDueDateOverride, cycles);
+        setCycles(cycleRun.cycles);
+
+        // Step 10: AUDIT.
+        const derivedCount = computation.entries.length;
+        const skippedCount = computation.skipped.length;
+        setAuditLog((prev) => [
+          ...prev,
+          auditEntry(
+            submittedBy,
+            "bd_report_submitted",
+            "Business Development",
+            `BD report submitted for ${report.reportingPeriod}: ${derivedCount} KPI(s) calculated, ${skippedCount} not derivable.`,
+            {
+              reportId: submitted.reportId,
+              cycleId: report.cycleId,
+              reportingPeriod: submitted.reportingPeriod,
+              kpisCalculated: derivedCount,
+              kpisSkipped: skippedCount,
+              sectionsReported: (Object.entries(validation.bySection) as [BdSectionKey, { state: string }][])
+                .filter(([, sec]) => sec.state === "complete")
+                .map(([key]) => key)
+                .join(", "),
+              nextDueDate: cycleRun.nextDueDate ?? null,
+            }
+          ),
+        ]);
+
+        return {
+          ok: true,
+          alerts: kpiRun.alerts,
+          computation,
+          nextDueDate: cycleRun.nextDueDate,
+          nextReportingPeriod: cycleRun.nextReportingPeriod,
+        };
+      },
       updateAlumniConfig: (updates: Partial<AlumniConfig>) => {
         setAlumniConfig((prev) => ({ ...prev, ...updates }));
 
@@ -1743,6 +1863,8 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       alumniReports,
       academyConfig,
       academyReports,
+      bdConfig,
+      bdReports,
     ]
   );
 

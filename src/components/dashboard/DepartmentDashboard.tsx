@@ -25,6 +25,8 @@ import { AlumniHealthSummary } from "./alumni/AlumniHealthSummary";
 import { MarketingHealthSummary } from "./marketing/MarketingHealthSummary";
 import { AcademySubmitDataModal } from "./AcademySubmitDataModal";
 import { AcademyHealthSummary } from "./academy/AcademyHealthSummary";
+import { BdSubmitDataModal } from "./businessDevelopment/BdSubmitDataModal";
+import { BdHealthSummary } from "./businessDevelopment/BdHealthSummary";
 
 export function DepartmentDashboard({
   department,
@@ -72,6 +74,10 @@ export function DepartmentDashboard({
   // assessments, certification) for the same reason: every Academy rate is
   // derived from rows, so the flat KPI form would let someone type one.
   const usesAcademySubmission = department === "Academy";
+  // Business Development reports through its six registers for the same reason:
+  // its headline number is a weighted pipeline and its rates are ratios of
+  // counted rows, so the flat KPI form would let someone type a win rate.
+  const usesBdSubmission = department === "Business Development";
   const kpis = allKpis.filter((k) => k.department === department);
   const allDeptRisks = allRisks.filter((r) => r.department === department);
   const risks = allDeptRisks.filter((r) => r.status !== "Resolved");
@@ -128,9 +134,11 @@ export function DepartmentDashboard({
                 ? "Submit Finance Data"
                 : usesAcademySubmission
                   ? "Submit Academy Data"
-                  : usesAlumniSubmission
-                    ? "Submit Alumni Data"
-                    : "Submit Data"}
+                  : usesBdSubmission
+                    ? "Submit BD Data"
+                    : usesAlumniSubmission
+                      ? "Submit Alumni Data"
+                      : "Submit Data"}
           </button>
         </div>
       </div>
@@ -395,6 +403,11 @@ export function DepartmentDashboard({
           from, and how many of its four registers hold rows. */}
       {department === "Academy" && <AcademyHealthSummary />}
 
+      {/* Business Development leads with its pipeline position - the number
+          that is most often quoted without saying how it was calculated - and
+          the register each figure came from. */}
+      {department === "Business Development" && <BdHealthSummary />}
+
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft/50">Key Performance Indicators</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -464,6 +477,8 @@ export function DepartmentDashboard({
         <AlumniSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : usesAcademySubmission ? (
         <AcademySubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      ) : usesBdSubmission ? (
+        <BdSubmitDataModal open={modalOpen} onClose={() => setModalOpen(false)} />
       ) : (
         <SubmitDataModal department={department} open={modalOpen} onClose={() => setModalOpen(false)} />
       )}

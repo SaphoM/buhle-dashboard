@@ -148,6 +148,22 @@ export const DEMO_CYCLES: DataCollectionCycle[] = [
     primaryKpiId: "kpi-academy-certification-rate",
   },
   {
+    cycleId: "cyc-bd-2026-10",
+    department: "Business Development",
+    dataset: "BD Pipeline & Win Log (Leads, Opportunities, Proposals, New Business, Clients, Partnerships)",
+    description:
+      "Pipeline movement for the month: leads received, opportunities opened and their stage, proposals sent and decided, business won, clients acquired and partnerships advanced.",
+    frequency: "Monthly",
+    reportingPeriod: "October 2026",
+    startDate: "2026-10-01",
+    dueDate: "2026-10-31",
+    status: "Open",
+    owner: "Business Development Manager",
+    completionPct: 45,
+    notes: "Demo draft saved - owned by the Business Development manager (Thabo Molefe).",
+    primaryKpiId: "bd-pipeline-value",
+  },
+  {
     cycleId: "cyc-alumni-2026-h2",
     department: "Alumni",
     dataset: "Tracer Survey",
